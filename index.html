@@ -241,8 +241,10 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 <div class="toast" id="toast"></div>
 <script>
 const KEY='h5_expense_v1';
-const BIN_ID='';  // ← 创建 npoint bin 后把 ID 填这里
-const MSG_API=BIN_ID?('https://api.npoint.io/'+BIN_ID):'';
+const BIN_ID='6ab77ec0ac6210605af7112f';
+const API_KEY='$2a$10$ozdu69gADpIovC9V66K7Rexv4XituqB0/j6RBkZiTLOFrOsm2TQOi';
+const API_URL='https://api.jsonbin.io/v3/b/'+BIN_ID;
+const API_HEADERS={'Content-Type':'application/json','X-Master-Key':API_KEY};
 let data=JSON.parse(localStorage.getItem(KEY)||'{"expenses":[],"categories":["餐饮","交通","购物","娱乐","生活","其他"]}');
 if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
 let selectedOffset=0;
@@ -266,7 +268,27 @@ function getCycle(offset=0){
   while(cur<=e){arr.push(new Date(cur));cur.setDate(cur.getDate()+1)}
   return {s,e,arr};
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(data));localStorage.setItem(KEY+'_days',dayCount)}
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(data));
+  localStorage.setItem(KEY+'_days',dayCount);
+  fetch(API_URL,{method:'PUT',headers:API_HEADERS,body:JSON.stringify(data)}).catch(()=>{});
+}
+async function loadCloud(){
+  try{
+    const r=await fetch(API_URL,{headers:{'X-Master-Key':API_KEY}});
+    if(!r.ok) return false;
+    const j=await r.json();
+    const remote=j.record||j;
+    if(remote&&Array.isArray(remote.expenses)){
+      data=remote;
+      if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
+      if(!Array.isArray(data.messages)) data.messages=[];
+      localStorage.setItem(KEY,JSON.stringify(data));
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1400)}
 function switchTab(t){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
@@ -469,11 +491,8 @@ function saveExpense(){
 }
 async function loadMessages(){
   const box=document.getElementById('msgList');
-  if(!MSG_API){box.innerHTML='<div class="empty">留言板还没联网配置<br>请按说明创建云端仓库后把 ID 发给我</div>';return}
-  try{
-    const r=await fetch(MSG_API); const j=await r.json();
-    renderMessages((j.messages||[]).slice().reverse());
-  }catch(e){box.innerHTML='<div class="empty">加载失败，点右上角刷新重试</div>'}
+  const list=(data.messages||[]).slice().reverse();
+  renderMessages(list);
 }
 function renderMessages(list){
   const box=document.getElementById('msgList');
@@ -484,17 +503,16 @@ async function postMessage(){
   const name=document.getElementById('msgName').value.trim();
   const text=document.getElementById('msgText').value.trim();
   if(!text){alert('留言内容不能为空');return}
-  if(!MSG_API){alert('留言板还没联网配置');return}
-  try{
-    const r=await fetch(MSG_API); const j=await r.json();
-    const msgs=j.messages||[];
-    msgs.push({name,text,time:Date.now()});
-    await fetch(MSG_API,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:msgs})});
-    document.getElementById('msgText').value='';
-    loadMessages();toast('留言已发送');
-  }catch(e){alert('发送失败，请检查网络')}
+  data.messages=data.messages||[];
+  data.messages.push({name,text,time:Date.now()});
+  save();
+  document.getElementById('msgText').value='';
+  loadMessages();toast('留言已发送');
 }
-render();
+(async function init(){
+  await loadCloud();
+  render();
+})();
 </script>
 </body>
 </html>
