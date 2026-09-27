@@ -56,6 +56,30 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 .day.today{box-shadow:0 0 0 2px var(--primary) inset}
 .day .d{font-size:11px;color:var(--muted)}.day strong{display:block;font-size:13px;margin:4px 0}.day small{font-size:9px;color:var(--muted)}
 .day.has small{color:var(--primary);font-weight:700}
+.day.over{background:#fdecec!important;border-color:#f5b7b7!important;color:var(--red)!important}
+.day.over small{color:var(--red)!important}
+.day.under{background:#e8f7ef!important;border-color:#b9e6cf!important;color:var(--green)!important}
+.day.under small{color:var(--green)!important}
+.records-body{overflow:hidden;transition:max-height .3s ease,opacity .3s;max-height:2000px;opacity:1}
+.records-body.collapsed{max-height:0;opacity:0}
+.fold-arrow{display:inline-block;transition:transform .25s;color:var(--muted);font-size:13px;margin-left:4px}
+.section-head.folded .fold-arrow{transform:rotate(-90deg)}
+.shift-day{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--line)}
+.shift-day:last-child{border-bottom:0}
+.shift-day .sd{font-size:14px;font-weight:600}
+.shift-day .sd small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}
+.shift-badge{padding:5px 14px;border-radius:10px;font-size:13px;font-weight:700}
+.shift-badge.白{background:#fff4d6;color:#d9930d}
+.shift-badge.夜{background:#e6e6ff;color:#4a3dd1}
+.shift-badge.休{background:#f0f2f5;color:#8b919d}
+.shift-today{background:#f7f8ff;border-radius:10px}
+.version-history{font-size:12px;color:var(--muted);line-height:1.7}
+.version-history b{color:var(--text)}
+#shiftDaysGrid.day{padding:4px 1px;border-radius:9px}
+#shiftDaysGrid .d{font-size:9px!important;color:var(--muted)!important;font-weight:600!important}
+#shiftDaysGrid strong{font-size:14px!important;font-weight:800!important;color:#1a1d26!important;margin:1px 0!important;line-height:1.1}
+#shiftDaysGrid small{font-size:9px!important;font-weight:700!important;margin-top:1px!important;display:block}
+#shiftDaysGrid{gap:4px!important}
 .detail-title{font-size:13px;color:var(--muted);margin-bottom:8px}
 .record{display:flex;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);animation:recordIn .3s ease}
 .record:last-child{border-bottom:0}
@@ -100,6 +124,16 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(30,32,40,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
 .toast.show{opacity:1}
 .hidden-input{display:none}
+.confetti{position:absolute;top:-10px;opacity:0;pointer-events:none;border-radius:2px;animation:confettiFall 3s ease-in forwards;transform-style:preserve-3d}
+#todayShiftCard{perspective:500px}
+@keyframes confettiFall{
+  0%{opacity:0;transform:translate3d(0,0,0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.7)}
+  8%{opacity:1}
+  100%{opacity:0;transform:translate3d(var(--dx,0),150px,var(--dz,0)) rotateX(720deg) rotateY(540deg) rotateZ(360deg)}
+}
+.confetti.circle{border-radius:50%}
+.confetti.triangle{width:0!important;height:0!important;background:transparent!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--c,#f05d5e);border-radius:0!important}
+.confetti.long{width:3px;height:18px}
 </style>
 </head>
 <body>
@@ -139,9 +173,9 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
         <div class="calhead">
           <button onclick="shiftCal(-1)">‹</button>
           <div class="daypick" id="daypick">
-            <button data-n="7" onclick="setDays(7)">7天</button>
-            <button data-n="14" onclick="setDays(14)">14天</button>
-            <button data-n="31" onclick="setDays(31)">31天</button>
+            <button data-n="7" onclick="setDays(7)">7</button>
+            <button data-n="14" onclick="setDays(14)">14</button>
+            <button data-n="31" onclick="setDays(31)">31</button>
           </div>
           <button onclick="shiftCal(1)">›</button>
         </div>
@@ -149,15 +183,86 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
       <div class="card"><div class="days" id="days"></div></div>
     </section>
     <section class="section">
-      <div class="section-head">
-        <h2>消费明细</h2>
+      <div class="section-head" id="recordsHead" onclick="toggleRecords()" style="cursor:pointer">
+        <h2>消费明细<span class="fold-arrow">▾</span></h2>
         <span class="link" id="countText">0 笔</span>
       </div>
+      <div class="records-body" id="recordsBody">
       <div class="detail-title" id="detailTitle">本周期明细</div>
       <div class="card" id="records"></div>
+      </div>
     </section>
     <div class="home-actions"><button class="add" onclick="openExpense()">＋ 记录一笔消费</button></div>
   </div>
+
+  <div class="page" id="page-shift">
+    <header>
+      <div><div class="title">排班表</div><div class="sub" id="shiftSub">点格子改班次</div></div>
+      <button class="settings" onclick="openShiftSettings()" aria-label="排班设置">⚙️</button>
+    </header>
+    <div class="card" id="todayShiftCard" style="margin:8px 16px;position:relative;overflow:hidden;padding:16px 18px">
+      <div id="confettiBox" style="position:absolute;inset:0;pointer-events:none;overflow:hidden"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;position:relative;z-index:2">
+        <div>
+          <div style="font-size:11px;color:var(--muted);letter-spacing:.5px">今日班次</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+            <span id="todayShiftDot" style="width:12px;height:12px;border-radius:50%;background:#ccc;display:inline-block"></span>
+            <span id="todayShiftName" style="font-size:26px;font-weight:800;line-height:1">--</span>
+          </div>
+        </div>
+        <span id="todayShiftStatus" style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:#f0f2f5;color:var(--muted)">--</span>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:10px;position:relative;z-index:2" id="todayShiftRange">--</div>
+      <div class="timebar" style="margin-top:10px;position:relative;z-index:2;height:8px"><i id="todayShiftBar"></i></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;position:relative;z-index:2">
+        <span style="font-size:11px;color:var(--muted)">开始 <b id="todayShiftStart" style="color:var(--text);font-size:13px">--</b></span>
+        <b id="todayShiftPct" style="font-size:18px;font-weight:800">0%</b>
+        <span style="font-size:11px;color:var(--muted)">结束 <b id="todayShiftEnd" style="color:var(--text);font-size:13px">--</b></span>
+      </div>
+    </div>
+    <div style="margin:8px 16px" class="card">
+      <div class="calhead" style="justify-content:space-between">
+        <button onclick="shiftCalMonth(-1)">‹</button>
+        <b id="shiftMonthTitle" style="font-size:15px">--</b>
+        <button onclick="shiftCalMonth(1)">›</button>
+      </div>
+      <div class="days" id="shiftDaysGrid" style="margin-top:12px"></div>
+      <div class="notice" style="margin-top:10px">点某天格子可单独改班次；右上角 ⚙️ 改循环规则和颜色。</div>
+    </div>
+  </div>
+
+<div class="modal" id="shiftPickModal">
+ <div class="sheet" style="position:relative">
+  <h3 id="shiftPickTitle">选择班次</h3>
+  <div id="shiftPickBtns" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px"></div>
+  <div style="border-top:1px solid var(--line);padding-top:13px">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px">＋ 新增班次</div>
+    <div style="display:flex;gap:8px">
+      <input id="newShiftName" placeholder="班次名，如 早班" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+      <input id="newShiftColor" type="color" value="#E17055" style="width:46px;height:42px;border:1px solid var(--line);border-radius:10px;padding:2px">
+      <button onclick="addShiftLabel()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 16px;font-weight:700">添加</button>
+    </div>
+  </div>
+  <div class="actions"><button class="save" onclick="closeShiftPick()" style="width:100%;flex:0 0 100%">完成</button></div>
+ </div>
+</div>
+
+<div class="modal" id="shiftSettingsModal">
+ <div class="sheet">
+  <h3>排班设置</h3>
+  <div class="field"><label>开始日期（循环起点）</label><input id="shiftStartDate" type="date"></div>
+  <div class="field"><label>循环模式（逗号分隔班次名）</label><input id="shiftPatternInput" placeholder="例如：白,夜,休,白,夜,休,休,休"></div>
+  <div class="field"><label>班次颜色</label><div id="shiftColorList"></div></div>
+  <div class="row">
+    <div class="field"><label>班次时长</label>
+      <select id="shiftHours"><option value="8">8 小时</option><option value="12">12 小时</option></select>
+    </div>
+    <div class="field"><label>班次开始时间</label><input id="shiftStartTime" type="time" value="08:00"></div>
+  </div>
+  <div class="notice">夜班跨天：若开始时间+时长跨过 24:00，进度会自动算到次日凌晨。"休"班不显示进度。</div>
+  <div class="actions"><button class="cancel" onclick="closeShiftSettings()">取消</button><button class="save" onclick="saveShiftSettings()">保存</button></div>
+ </div>
+</div>
 
   <div class="page" id="page-tools">
     <header><div><div class="title">工具</div><div class="sub">留言板（联网）</div></div></header>
@@ -214,6 +319,22 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
           </div>
         </div>
       </div>
+      <div class="set-group">
+        <div class="set-head" onclick="toggleGroup(this)"><b>更新日志</b><span class="arrow">›</span></div>
+        <div class="set-body">
+          <div class="version-history">
+            <p><b>v1.1</b> · 2026-09-27</p>
+            <p>· 日历格子按当日是否超预算自动变红/变绿</p>
+            <p>· 未消费日期显示 ¥0.00</p>
+            <p>· 消费明细可折叠，方便点记录按钮</p>
+            <p>· 新增排班页：四班两倒一键生成</p>
+            <p>· 天数筛选按钮去掉"天"字</p>
+            <p><b>v1.0</b> · 2026-09-26</p>
+            <p>· 初版上线：每日30元限额、周期25号至次月25号</p>
+            <p>· 记录/删除/分类/月预算/留言板云端同步</p>
+          </div>
+        </div>
+      </div>
     </div>
     <input type="file" id="importFile" class="hidden-input" accept="application/json" onchange="importData(event)">
   </div>
@@ -222,6 +343,7 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 
 <div class="tabbar">
   <button class="on" data-tab="home" onclick="switchTab('home')"><span class="ic">🏠</span>主页</button>
+  <button data-tab="shift" onclick="switchTab('shift')"><span class="ic">📅</span>排班</button>
   <button data-tab="tools" onclick="switchTab('tools')"><span class="ic">🛠</span>工具</button>
   <button data-tab="settings" onclick="switchTab('settings')"><span class="ic">⚙️</span>设置</button>
 </div>
@@ -296,6 +418,7 @@ function switchTab(t){
   document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   if(t==='settings'){document.getElementById('monthBudget').value=data.monthBudget||'';renderCats()}
   if(t==='tools'){loadMessages()}
+  if(t==='shift'){initShift()}
 }
 function toggleGroup(el){el.parentElement.classList.toggle('open')}
 function shiftCycle(d){selectedOffset+=d;calendarStart=null;render()}
@@ -348,10 +471,274 @@ function render(){
   expectEl.classList.toggle('red', expectedDaily>0 && focusSpent>expectedDaily);
   setActualImmediate(money(focusSpent));
   document.querySelectorAll('#daypick button').forEach(b=>b.classList.toggle('on',+b.dataset.n===dayCount));
-  renderDays(c);
+  renderDays(c, expectedDaily);
   renderRecords(c);
 }
-function renderDays(c){
+function toggleRecords(){
+  document.getElementById('recordsBody').classList.toggle('collapsed');
+  document.getElementById('recordsHead').classList.toggle('folded');
+}
+const DEFAULT_SHIFT_PATTERN=['白','夜','休','白','夜','休','休','休'];
+const DEFAULT_SHIFT_COLORS={'白':'#2F80ED','夜':'#6C5CE7','休':'#00B894'};
+let shiftCalCursor=new Date();
+let pickDateKey=null;
+function shiftPattern(){return Array.isArray(data.shiftPattern)&&data.shiftPattern.length?data.shiftPattern:DEFAULT_SHIFT_PATTERN}
+function shiftColors(){return Object.assign({},DEFAULT_SHIFT_COLORS,data.shiftColors||{})}
+function allShiftLabels(){
+  const s=new Set(shiftPattern());
+  (data.shiftOverrides?Object.values(data.shiftOverrides):[]).forEach(x=>s.add(x));
+  Object.keys(shiftColors()).forEach(x=>s.add(x));
+  return Array.from(s);
+}
+function getShiftOf(dateKey){
+  if(data.shiftOverrides&&data.shiftOverrides[dateKey]) return data.shiftOverrides[dateKey];
+  if(!data.shiftStart) return null;
+  const sp=data.shiftStart.split('-').map(Number);
+  const s=new Date(sp[0],sp[1]-1,sp[2]);
+  const dp=dateKey.split('-').map(Number);
+  const d=new Date(dp[0],dp[1]-1,dp[2]);
+  const diff=Math.round((d-s)/86400000);
+  if(diff<0) return null;
+  const p=shiftPattern();
+  return p[diff%p.length];
+}
+function initShift(){
+  if(!data.shiftStart){
+    data.shiftStart=fmtDate(new Date());
+    save();
+  }
+  shiftCalCursor=new Date();
+  renderShiftCal();
+  updateTodayShift();
+  if(document.getElementById('todayShiftStatus').textContent.indexOf('已下班')>=0){
+    fireConfetti();
+  }
+  clearInterval(initShift._t);
+  initShift._t=setInterval(updateTodayShift,30000);
+}
+function fireConfetti(){
+  const box=document.getElementById('confettiBox');
+  if(!box) return;
+  if(fireConfetti._playing){
+    clearTimeout(fireConfetti._pending);
+    fireConfetti._pending=setTimeout(fireConfetti,4200);
+    return;
+  }
+  fireConfetti._playing=true;
+  box.innerHTML='';
+  const colors=['#f05d5e','#f7b500','#22b573','#5b67f1','#fd79a8','#00b894','#fdcb6e','#e17055','#6c5ce7','#0984e3'];
+  const shapes=['rect','rect','circle','circle','triangle','long'];
+  let maxTime=0;
+  for(let i=0;i<46;i++){
+    const c=document.createElement('div');
+    const shape=shapes[Math.floor(Math.random()*shapes.length)];
+    c.className='confetti '+shape;
+    c.style.left=(3+Math.random()*94)+'%';
+    const col=colors[Math.floor(Math.random()*colors.length)];
+    if(shape==='triangle'){
+      c.style.setProperty('--c',col);
+    } else {
+      c.style.background=col;
+      const s=0.7+Math.random()*0.9;
+      c.style.width=(6+Math.random()*6)+'px';
+      c.style.height=(10+Math.random()*10)+'px';
+      c.style.transform='scale('+s+')';
+    }
+    const delay=Math.random()*0.6;
+    const dur=2.4+Math.random()*1.4;
+    c.style.animationDelay=delay+'s';
+    c.style.animationDuration=dur+'s';
+    c.style.setProperty('--dx',(Math.random()*90-45)+'px');
+    c.style.setProperty('--dz',(Math.random()*80-40)+'px');
+    box.appendChild(c);
+    maxTime=Math.max(maxTime,delay+dur);
+  }
+  setTimeout(()=>{box.innerHTML='';fireConfetti._playing=false},(maxTime+0.3)*1000);
+}
+function shiftHours(){return +data.shiftHours||8}
+function shiftStartMin(){
+  const t=data.shiftStartTime||'08:00';
+  const [h,m]=t.split(':').map(Number);
+  return h*60+m;
+}
+function updateTodayShift(){
+  const key=fmtDate(new Date());
+  const shift=getShiftOf(key);
+  const nameEl=document.getElementById('todayShiftName');
+  const colors=shiftColors();
+  const col=colors[shift]||'#8b919d';
+  nameEl.textContent=shift||'未排';
+  nameEl.style.color=col;
+  document.getElementById('todayShiftDot').style.background=col;
+  const card=document.getElementById('todayShiftCard');
+  const bar=document.getElementById('todayShiftBar');
+  const pctEl=document.getElementById('todayShiftPct');
+  const statusEl=document.getElementById('todayShiftStatus');
+  const rangeEl=document.getElementById('todayShiftRange');
+  const startEl=document.getElementById('todayShiftStart');
+  const endEl=document.getElementById('todayShiftEnd');
+  if(!shift||shift==='休'){
+    card.style.background='#f0f2f5';
+    bar.style.width='0%';pctEl.textContent='--';
+    statusEl.textContent='休息';
+    statusEl.style.color='var(--muted)';statusEl.style.background='#e2e5ec';
+    rangeEl.textContent='今天休息';startEl.textContent='--';endEl.textContent='--';
+    return;
+  }
+  card.style.background='var(--card)';
+  const startMin=shiftStartMin();
+  const durMin=shiftHours()*60;
+  const now=new Date();
+  const nowMin=now.getHours()*60+now.getMinutes();
+  let sMin=startMin, eMin=startMin+durMin;
+  // 跨天处理：如果结束分钟超过 1440，按今天的开始~今天结束 或 今天凌晨~今天结束
+  // 简化：从今天的 startMin 开始，durMin 分钟后结束；若 >1440 则跨到明天
+  let pct=0, status='';
+  if(nowMin<sMin){
+    pct=0; status='未上班';
+  } else if(nowMin>=eMin && eMin<=1440){
+    pct=100; status='已下班';
+  } else if(eMin>1440 && nowMin < eMin-1440){
+    // 夜班跨天：今天凌晨~今天结束时间
+    sMin=0; eMin=eMin-1440;
+    if(nowMin<eMin){pct=nowMin/eMin*100; status='上班中';}
+    else {pct=100; status='已下班';}
+  } else {
+    pct=Math.min(100,(nowMin-sMin)/(eMin>1440?1440-sMin:eMin-sMin)*100);
+    status='上班中';
+  }
+  bar.style.width=pct+'%';
+  bar.style.background=col;
+  pctEl.textContent=Math.round(pct)+'%';
+  if(status==='已下班' && updateTodayShift._last!=='已下班'){
+    fireConfetti();
+    statusEl.textContent='🎉 已下班';
+  } else {
+    statusEl.textContent=status;
+  }
+  statusEl.style.color=status==='已下班'?'#fff':'#fff';
+  statusEl.style.background=status==='已下班'?'#f05d5e':(status==='未上班'?'#8b919d':col);
+  updateTodayShift._last=status;
+  const fmt=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+  let sTxt=fmt(sMin), eTxt=eMin<=1440?fmt(eMin):fmt(eMin-1440);
+  if(eMin>1440 && nowMin>=sMin){ eTxt=fmt(eMin-1440)+' 次日'; }
+  rangeEl.textContent=sTxt+' - '+eTxt;
+  startEl.textContent=sTxt;
+  endEl.textContent=eTxt;
+}
+function renderShiftCal(){
+  const y=shiftCalCursor.getFullYear(), m=shiftCalCursor.getMonth();
+  document.getElementById('shiftMonthTitle').textContent=`${y}年${m+1}月`;
+  const first=new Date(y,m,1);
+  const startOffset=first.getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const grid=document.getElementById('shiftDaysGrid');
+  grid.innerHTML='';
+  const todayKey=fmtDate(new Date());
+  for(let i=0;i<startOffset;i++){
+    const ph=document.createElement('div');ph.style.visibility='hidden';grid.appendChild(ph);
+  }
+  const colors=shiftColors();
+  for(let d=1;d<=daysInMonth;d++){
+    const dt=new Date(y,m,d);
+    const key=fmtDate(dt);
+    const shift=getShiftOf(key);
+    const el=document.createElement('div');
+    el.className='day';
+    if(key===todayKey) el.style.boxShadow='0 0 0 2px var(--primary) inset';
+    if(shift){
+      const col=colors[shift]||'#8b919d';
+      el.style.background=col+'22';
+      el.style.borderColor=col+'66';
+      el.innerHTML=`<div class="d">${m+1}/${d}</div><strong>${d}</strong><small style="color:${col}">${shift}</small>`;
+    } else {
+      el.innerHTML=`<div class="d">${m+1}/${d}</div><strong>${d}</strong><small>--</small>`;
+    }
+    el.onclick=()=>openShiftPick(key);
+    grid.appendChild(el);
+  }
+}
+function shiftCalMonth(d){
+  shiftCalCursor.setMonth(shiftCalCursor.getMonth()+d);
+  renderShiftCal();
+}
+function openShiftPick(dateKey){
+  pickDateKey=dateKey;
+  document.getElementById('shiftPickTitle').textContent=dateKey+' 班次';
+  const colors=shiftColors();
+  const labels=allShiftLabels();
+  const box=document.getElementById('shiftPickBtns');
+  box.innerHTML=labels.map(l=>{
+    const c=colors[l]||'#8b919d';
+    return `<button onclick='confirmShift("${l}")' style="padding:13px 0;border:0;border-radius:12px;font-weight:700;color:#fff;background:${c}">${l}</button>`;
+  }).join('');
+  document.getElementById('shiftPickModal').classList.add('show');
+}
+function addShiftLabel(){
+  const nameEl=document.getElementById('newShiftName');
+  const colorEl=document.getElementById('newShiftColor');
+  const n=(nameEl.value||'').trim();
+  if(!n){alert('请输入班次名');return}
+  const colors=shiftColors();
+  colors[n]=colorEl.value;
+  data.shiftColors=colors;
+  save();
+  nameEl.value='';
+  // 直接往按钮网格里插入新按钮
+  const btn=document.createElement('button');
+  btn.textContent=n;
+  btn.style.cssText='padding:13px 0;border:0;border-radius:12px;font-weight:700;color:#fff;background:'+colorEl.value;
+  btn.onclick=()=>confirmShift(n);
+  document.getElementById('shiftPickBtns').appendChild(btn);
+  toast('已添加 '+n);
+}
+function confirmShift(label){
+  if(!pickDateKey) return;
+  data.shiftOverrides=data.shiftOverrides||{};
+  data.shiftOverrides[pickDateKey]=label;
+  save();renderShiftCal();closeShiftPick();toast('已设置为'+label);
+}
+function clearShiftDay(){
+  if(!pickDateKey) return;
+  if(data.shiftOverrides) delete data.shiftOverrides[pickDateKey];
+  save();renderShiftCal();closeShiftPick();toast('已恢复循环默认');
+}
+function closeShiftPick(){document.getElementById('shiftPickModal').classList.remove('show')}
+function openShiftSettings(){
+  document.getElementById('shiftStartDate').value=data.shiftStart||fmtDate(new Date());
+  document.getElementById('shiftPatternInput').value=shiftPattern().join(',');
+  document.getElementById('shiftHours').value=data.shiftHours||8;
+  document.getElementById('shiftStartTime').value=data.shiftStartTime||'08:00';
+  renderShiftColorList();
+  document.getElementById('shiftSettingsModal').classList.add('show');
+}
+function closeShiftSettings(){document.getElementById('shiftSettingsModal').classList.remove('show')}
+function renderShiftColorList(){
+  const labels=allShiftLabels();
+  const colors=shiftColors();
+  document.getElementById('shiftColorList').innerHTML=labels.map((l,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+      <span style="flex:1;font-size:14px">${l}</span>
+      <input type="color" value="${colors[l]||'#8b919d'}" data-label="${l}" style="width:50px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px">
+    </div>`).join('');
+}
+function saveShiftSettings(){
+  const sd=document.getElementById('shiftStartDate').value;
+  if(!sd){alert('请选择开始日期');return}
+  data.shiftStart=sd;
+  const pat=document.getElementById('shiftPatternInput').value.split(/[,，\s]+/).map(s=>s.trim()).filter(Boolean);
+  if(!pat.length){alert('循环模式不能为空');return}
+  data.shiftPattern=pat;
+  const newColors=Object.assign({},DEFAULT_SHIFT_COLORS,data.shiftColors);
+  document.querySelectorAll('#shiftColorList input[type=color]').forEach(inp=>{
+    newColors[inp.dataset.label]=inp.value;
+  });
+  data.shiftColors=newColors;
+  data.shiftHours=+document.getElementById('shiftHours').value;
+  data.shiftStartTime=document.getElementById('shiftStartTime').value;
+  save();renderShiftCal();updateTodayShift();closeShiftSettings();toast('排班设置已保存');
+}
+function renderDays(c, expectedDaily){
   if(!calendarStart) calendarStart=new Date(c.s);
   const days=document.getElementById('days'); days.innerHTML='';
   const todayKey=fmtDate(new Date());
@@ -360,8 +747,16 @@ function renderDays(c){
     const key=fmtDate(d);
     const el=document.createElement('div');
     const spentDay=data.expenses.filter(x=>x.date===key).reduce((a,x)=>a+(+x.amount||0),0);
-    el.className='day '+(key===todayKey?'today ':'')+(key===selectedDate?'selected ':'')+(spentDay?'has':'');
-    el.innerHTML=`<div class="d">${d.getMonth()+1}/${d.getDate()}</div><strong>${d.getDate()}</strong><small>${spentDay?money(spentDay).replace('¥',''):'—'}</small>`;
+    let cls='day ';
+    if(key===todayKey) cls+='today ';
+    if(key===selectedDate) cls+='selected ';
+    if(expectedDaily>0 && key<=todayKey){
+      if(spentDay>expectedDaily) cls+='over ';
+      else cls+='under ';
+    }
+    el.className=cls.trim();
+    const showAmt=spentDay>0?money(spentDay).replace('¥',''):'0.00';
+    el.innerHTML=`<div class="d">${d.getMonth()+1}/${d.getDate()}</div><strong>${d.getDate()}</strong><small>${showAmt}</small>`;
     el.onclick=()=>{ selectedDate=(selectedDate===key)?null:key; render(); };
     days.appendChild(el);
   }
