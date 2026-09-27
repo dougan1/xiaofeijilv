@@ -124,12 +124,11 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:rgba(30,32,40,.92);color:#fff;padding:10px 18px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
 .toast.show{opacity:1}
 .hidden-input{display:none}
-.confetti{position:absolute;top:-10px;opacity:0;pointer-events:none;border-radius:2px;animation:confettiFall 3s ease-in forwards;transform-style:preserve-3d}
-#todayShiftCard{perspective:500px}
+.confetti{position:absolute;top:-10px;opacity:0;pointer-events:none;border-radius:2px;animation:confettiFall 2.6s ease-in forwards;will-change:transform,opacity}
 @keyframes confettiFall{
-  0%{opacity:0;transform:translate3d(0,0,0) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.7)}
-  8%{opacity:1}
-  100%{opacity:0;transform:translate3d(var(--dx,0),150px,var(--dz,0)) rotateX(720deg) rotateY(540deg) rotateZ(360deg)}
+  0%{opacity:0;transform:translate3d(0,0,0) rotate(0deg) scale(.8)}
+  10%{opacity:1}
+  100%{opacity:0;transform:translate3d(var(--dx,0),120px,0) rotate(360deg)}
 }
 .confetti.circle{border-radius:50%}
 .confetti.triangle{width:0!important;height:0!important;background:transparent!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--c,#f05d5e);border-radius:0!important}
@@ -145,6 +144,7 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
         <button class="navbtn" onclick="shiftCycle(-1)" aria-label="上一周期">‹</button>
         <div><div class="title">消费记录</div><div class="sub" id="cycleText" onclick="resetCal()" title="点击回到本周期"></div></div>
         <button class="navbtn" onclick="shiftCycle(1)" aria-label="下一周期">›</button>
+        <button class="navbtn" onclick="openHomeSettings()" aria-label="主页设置">⚙️</button>
       </div>
     </header>
     <div class="balance" id="balanceCard">
@@ -212,8 +212,7 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
         </div>
         <span id="todayShiftStatus" style="font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:#f0f2f5;color:var(--muted)">--</span>
       </div>
-      <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:10px;position:relative;z-index:2" id="todayShiftRange">--</div>
-      <div class="timebar" style="margin-top:10px;position:relative;z-index:2;height:8px"><i id="todayShiftBar"></i></div>
+      <div class="timebar" style="margin-top:14px;position:relative;z-index:2;height:8px"><i id="todayShiftBar"></i></div>
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;position:relative;z-index:2">
         <span style="font-size:11px;color:var(--muted)">开始 <b id="todayShiftStart" style="color:var(--text);font-size:13px">--</b></span>
         <b id="todayShiftPct" style="font-size:18px;font-weight:800">0%</b>
@@ -278,26 +277,8 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
   </div>
 
   <div class="page" id="page-settings">
-    <header><div><div class="title">设置</div><div class="sub">预算、分类与数据管理</div></div></header>
+    <header><div><div class="title">设置</div><div class="sub">数据管理与更新日志</div></div></header>
     <div class="card" style="margin:8px 16px">
-      <div class="set-group open">
-        <div class="set-head" onclick="toggleGroup(this)"><b>预算设置</b><span class="arrow">›</span></div>
-        <div class="set-body">
-          <div class="field"><label>周期可使用金额（元）</label><input id="monthBudget" type="number" min="0" step="0.01" placeholder="例如 930"></div>
-          <button class="save" style="width:100%;border:0;border-radius:12px;padding:11px;background:var(--primary);color:#fff;font-weight:700" onclick="saveSettings()">保存预算</button>
-          <div class="notice">周期规则：每月25日至次月25日。预计消费 = 周期可使用金额 ÷ 周期天数。当日实际消费超过预计消费时，"预计"数字变红提醒。剩余进度条：≥50% 绿，30%~50% 黄，&lt;30% 红。</div>
-        </div>
-      </div>
-      <div class="set-group">
-        <div class="set-head" onclick="toggleGroup(this)"><b>消费分类</b><span class="arrow">›</span></div>
-        <div class="set-body">
-          <div id="catList"></div>
-          <div class="cat-add">
-            <input id="newCat" placeholder="输入新分类名，如 医疗" onkeydown="if(event.key==='Enter')addCat()">
-            <button onclick="addCat()">添加</button>
-          </div>
-        </div>
-      </div>
       <div class="set-group">
         <div class="set-head" onclick="toggleGroup(this)"><b>数据管理</b><span class="arrow">›</span></div>
         <div class="set-body">
@@ -308,6 +289,14 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
           <div class="tool-row">
             <div><b>导入备份</b><p>从之前导出的 JSON 文件恢复记录</p></div>
             <button class="go" onclick="document.getElementById('importFile').click()">选择文件</button>
+          </div>
+          <div class="tool-row">
+            <div><b>导出为文本</b><p>把所有记录整理成纯文本，复制后可粘贴到备忘录/微信备份</p></div>
+            <button class="go" onclick="exportText()">导出</button>
+          </div>
+          <div class="tool-row">
+            <div><b>从文本导入</b><p>粘贴之前导出的文本，自动恢复全部记录</p></div>
+            <button class="go" onclick="importText()">导入</button>
           </div>
           <div class="tool-row">
             <div><b>清空本周期</b><p>只删除当前周期的记录，历史周期保留</p></div>
@@ -335,6 +324,33 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
           </div>
         </div>
       </div>
+      <div class="set-group">
+        <div class="set-head" onclick="toggleGroup(this)"><b>管理员功能</b><span class="arrow">›</span></div>
+        <div class="set-body">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <input id="setAdminPass" type="password" placeholder="输入管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+            <button onclick="checkAdminFromSettings()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 16px;font-weight:700">验证</button>
+          </div>
+          <div id="adminSettingsArea" style="display:none">
+            <div style="font-size:13px;font-weight:700;margin:10px 0 6px">添加账号</div>
+            <div style="display:flex;gap:8px">
+              <input id="newAccount" placeholder="账号名" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+              <input id="newAccountPass" placeholder="密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+              <button onclick="addAccount()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">添加</button>
+            </div>
+            <div style="font-size:13px;font-weight:700;margin:14px 0 6px">账号列表</div>
+            <div id="accountList" style="max-height:200px;overflow-y:auto"></div>
+            <div style="font-size:13px;font-weight:700;margin:14px 0 6px">修改管理员密码</div>
+            <div style="display:flex;gap:8px">
+              <input id="newAdminPass" type="password" placeholder="新管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+              <button onclick="changeAdminPass()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">保存</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="set-group">
+        <div class="set-head" onclick="doLogout()"><b>退出登录</b><span class="arrow">›</span></div>
+      </div>
     </div>
     <input type="file" id="importFile" class="hidden-input" accept="application/json" onchange="importData(event)">
   </div>
@@ -360,6 +376,62 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
   <div class="actions"><button class="cancel" onclick="closeModal()">取消</button><button class="save" onclick="saveExpense()">保存</button></div>
  </div>
 </div>
+<div class="modal" id="homeSettingsModal">
+ <div class="sheet">
+  <h3>主页设置</h3>
+  <div class="field"><label>周期可使用金额（元）</label><input id="monthBudget" type="number" min="0" step="0.01" placeholder="例如 930"></div>
+  <button class="save" style="width:100%;border:0;border-radius:12px;padding:11px;background:var(--primary);color:#fff;font-weight:700;margin-bottom:14px" onclick="saveSettings()">保存预算</button>
+  <div style="font-size:13px;font-weight:700;margin-bottom:8px">消费分类</div>
+  <div id="catList"></div>
+  <div class="cat-add">
+    <input id="newCat" placeholder="输入新分类名，如 医疗" onkeydown="if(event.key==='Enter')addCat()">
+    <button onclick="addCat()">添加</button>
+  </div>
+  <div class="actions"><button class="save" style="flex:1" onclick="closeHomeSettings()">完成</button></div>
+ </div>
+</div>
+<div class="modal show" id="loginModal" style="z-index:50">
+ <div class="sheet">
+  <h3>登录</h3>
+  <div class="field"><label>账号</label><input id="loginUser" placeholder="输入账号"></div>
+  <div class="field"><label>密码</label><input id="loginPass" type="password" placeholder="输入密码"></div>
+  <div class="actions"><button class="save" style="flex:1" onclick="window.doLogin()">登录</button></div>
+  <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">—— 管理员登录 ——</div>
+    <div style="display:flex;gap:8px">
+      <input id="adminPass2" type="password" placeholder="管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+      <button onclick="window.doAdminLogin2()" style="border:0;background:#333;color:#fff;border-radius:10px;padding:0 16px;font-weight:700">进入</button>
+    </div>
+  </div>
+ </div>
+</div>
+<div class="modal" id="adminLoginModal" style="z-index:60">
+ <div class="sheet">
+  <h3>管理员验证</h3>
+  <div class="field"><label>管理员密码</label><input id="adminPass" type="password" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+  <div class="actions"><button class="cancel" onclick="closeAdminLogin()">取消</button><button class="save" onclick="doAdminLogin()">验证</button></div>
+ </div>
+</div>
+<div class="modal" id="adminPanelModal" style="z-index:60">
+ <div class="sheet">
+  <h3>管理员面板</h3>
+  <div class="notice" style="margin-bottom:10px">当前登录：<b id="adminWho"></b></div>
+  <div style="font-size:13px;font-weight:700;margin:10px 0 6px">添加账号</div>
+  <div style="display:flex;gap:8px">
+    <input id="newAccount" placeholder="账号名" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+    <input id="newAccountPass" placeholder="密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+    <button onclick="addAccount()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">添加</button>
+  </div>
+  <div style="font-size:13px;font-weight:700;margin:14px 0 6px">账号列表</div>
+  <div id="accountList" style="max-height:200px;overflow-y:auto"></div>
+  <div style="font-size:13px;font-weight:700;margin:14px 0 6px">修改管理员密码</div>
+  <div style="display:flex;gap:8px">
+    <input id="newAdminPass" type="password" placeholder="新管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
+    <button onclick="changeAdminPass()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">保存</button>
+  </div>
+  <div class="actions"><button class="save" style="flex:1" onclick="closeAdminPanel()">完成</button></div>
+ </div>
+</div>
 <div class="toast" id="toast"></div>
 <script>
 const KEY='h5_expense_v1';
@@ -367,8 +439,9 @@ const BIN_ID='6ab77ec0ac6210605af7112f';
 const API_KEY='$2a$10$ozdu69gADpIovC9V66K7Rexv4XituqB0/j6RBkZiTLOFrOsm2TQOi';
 const API_URL='https://api.jsonbin.io/v3/b/'+BIN_ID;
 const API_HEADERS={'Content-Type':'application/json','X-Master-Key':API_KEY};
-let data=JSON.parse(localStorage.getItem(KEY)||'{"expenses":[],"categories":["餐饮","交通","购物","娱乐","生活","其他"]}');
-if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
+let root={accounts:{},adminPassword:'admin123',users:{}};
+let data={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};
+let currentUser=null;
 let selectedOffset=0;
 let dayCount=+localStorage.getItem(KEY+'_days')||31;
 let selectedDate=null;
@@ -391,9 +464,11 @@ function getCycle(offset=0){
   return {s,e,arr};
 }
 function save(){
+  if(currentUser) root.users[currentUser]=data;
+  localStorage.setItem(KEY+'_user',currentUser||'');
   localStorage.setItem(KEY,JSON.stringify(data));
   localStorage.setItem(KEY+'_days',dayCount);
-  fetch(API_URL,{method:'PUT',headers:API_HEADERS,body:JSON.stringify(data)}).catch(()=>{});
+  fetch(API_URL,{method:'PUT',headers:API_HEADERS,body:JSON.stringify(root)}).catch(()=>{});
 }
 async function loadCloud(){
   try{
@@ -401,24 +476,46 @@ async function loadCloud(){
     if(!r.ok) return false;
     const j=await r.json();
     const remote=j.record||j;
-    if(remote&&Array.isArray(remote.expenses)){
-      data=remote;
-      if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
-      if(!Array.isArray(data.messages)) data.messages=[];
-      localStorage.setItem(KEY,JSON.stringify(data));
-      return true;
+    if(!remote) return false;
+    // 兼容旧数据：如果 remote 直接有 expenses，迁移到 admin 用户
+    if(Array.isArray(remote.expenses)){
+      root={accounts:remote.accounts||{},adminPassword:remote.adminPassword||'admin123',users:remote.users||{}};
+      if(!root.users['admin']) root.users['admin']=remote;
+    } else {
+      root=remote;
     }
+    if(!root.accounts) root.accounts={};
+    if(!root.users) root.users={};
+    if(!root.adminPassword) root.adminPassword='admin123';
+    return true;
   }catch(e){}
   return false;
+}
+function loadUser(name){
+  currentUser=name;
+  data=root.users[name];
+  if(!data){data={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};root.users[name]=data;}
+  if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
+  if(!Array.isArray(data.messages)) data.messages=[];
+  if(!Array.isArray(data.expenses)) data.expenses=[];
+  localStorage.setItem(KEY,JSON.stringify(data));
 }
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1400)}
 function switchTab(t){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('show'));
   document.getElementById('page-'+t).classList.add('show');
   document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
-  if(t==='settings'){document.getElementById('monthBudget').value=data.monthBudget||'';renderCats()}
   if(t==='tools'){loadMessages()}
   if(t==='shift'){initShift()}
+}
+function openHomeSettings(){
+  document.getElementById('monthBudget').value=data.monthBudget||'';
+  renderCats();
+  document.getElementById('homeSettingsModal').classList.add('show');
+}
+function closeHomeSettings(){
+  document.getElementById('homeSettingsModal').classList.remove('show');
+  render();
 }
 function toggleGroup(el){el.parentElement.classList.toggle('open')}
 function shiftCycle(d){selectedOffset+=d;calendarStart=null;render()}
@@ -431,7 +528,7 @@ function shiftCal(dir){
 }
 function saveSettings(){
   const v=parseFloat(document.getElementById('monthBudget').value)||0;
-  data.monthBudget=v;save();switchTab('home');render();toast('设置已保存');
+  data.monthBudget=v;save();closeHomeSettings();toast('预算已保存');
 }
 function barColor(pct){return pct>=50?'#22b573':(pct>=30?'#f7b500':'#f05d5e')}
 function tick(){
@@ -445,9 +542,24 @@ function render(){
   document.getElementById('cycleText').classList.toggle('today',selectedOffset===0);
   const monthBudget=+data.monthBudget||0;
   const cycleDays=c.arr.length;
-  const expectedDaily=cycleDays?monthBudget/cycleDays:0;
+  const baseDaily=cycleDays?monthBudget/cycleDays:0;
   const inCycleSet=new Set(c.arr.map(fmtDate));
   const spent=data.expenses.filter(x=>inCycleSet.has(x.date)).reduce((a,x)=>a+(+x.amount||0),0);
+  // 动态每日预算：到某天为止剩余预算 ÷ 从那天起到周期结束的天数
+  const spentBefore={};
+  let acc=0;
+  c.arr.forEach(d=>{
+    const k=fmtDate(d);
+    spentBefore[k]=acc;
+    acc+=data.expenses.filter(x=>x.date===k).reduce((a,x)=>a+(+x.amount||0),0);
+  });
+  const expectedAt=(key)=>{
+    const idx=c.arr.findIndex(d=>fmtDate(d)===key);
+    if(idx<0) return baseDaily;
+    const leftDays=cycleDays-idx;
+    const leftBudget=monthBudget-spentBefore[key];
+    return leftDays>0?leftBudget/leftDays:0;
+  };
   const remain=monthBudget-spent, pct=monthBudget?Math.max(0,Math.min(100,remain/monthBudget*100)):0;
   document.getElementById('budget').textContent=money(monthBudget);
   document.getElementById('spent').textContent=money(spent);
@@ -466,12 +578,13 @@ function render(){
   const focusKey=selectedDate||todayKey;
   const focusSpent=data.expenses.filter(x=>x.date===focusKey).reduce((a,x)=>a+(+x.amount||0),0);
   document.getElementById('actualLab').textContent=selectedDate?focusKey.slice(5):'当日';
+  const focusExpected=expectedAt(focusKey);
   const expectEl=document.getElementById('expectNum');
-  expectEl.textContent=money(expectedDaily);
-  expectEl.classList.toggle('red', expectedDaily>0 && focusSpent>expectedDaily);
+  expectEl.textContent=money(focusExpected);
+  expectEl.classList.toggle('red', focusExpected>0 && focusSpent>focusExpected);
   setActualImmediate(money(focusSpent));
   document.querySelectorAll('#daypick button').forEach(b=>b.classList.toggle('on',+b.dataset.n===dayCount));
-  renderDays(c, expectedDaily);
+  renderDays(c, expectedAt);
   renderRecords(c);
 }
 function toggleRecords(){
@@ -529,27 +642,24 @@ function fireConfetti(){
   const colors=['#f05d5e','#f7b500','#22b573','#5b67f1','#fd79a8','#00b894','#fdcb6e','#e17055','#6c5ce7','#0984e3'];
   const shapes=['rect','rect','circle','circle','triangle','long'];
   let maxTime=0;
-  for(let i=0;i<46;i++){
+  for(let i=0;i<22;i++){
     const c=document.createElement('div');
     const shape=shapes[Math.floor(Math.random()*shapes.length)];
     c.className='confetti '+shape;
-    c.style.left=(3+Math.random()*94)+'%';
+    c.style.left=(5+Math.random()*90)+'%';
     const col=colors[Math.floor(Math.random()*colors.length)];
     if(shape==='triangle'){
       c.style.setProperty('--c',col);
     } else {
       c.style.background=col;
-      const s=0.7+Math.random()*0.9;
-      c.style.width=(6+Math.random()*6)+'px';
-      c.style.height=(10+Math.random()*10)+'px';
-      c.style.transform='scale('+s+')';
+      c.style.width=(6+Math.random()*5)+'px';
+      c.style.height=(9+Math.random()*8)+'px';
     }
-    const delay=Math.random()*0.6;
-    const dur=2.4+Math.random()*1.4;
+    const delay=Math.random()*0.4;
+    const dur=2+Math.random()*0.8;
     c.style.animationDelay=delay+'s';
     c.style.animationDuration=dur+'s';
-    c.style.setProperty('--dx',(Math.random()*90-45)+'px');
-    c.style.setProperty('--dz',(Math.random()*80-40)+'px');
+    c.style.setProperty('--dx',(Math.random()*70-35)+'px');
     box.appendChild(c);
     maxTime=Math.max(maxTime,delay+dur);
   }
@@ -574,7 +684,6 @@ function updateTodayShift(){
   const bar=document.getElementById('todayShiftBar');
   const pctEl=document.getElementById('todayShiftPct');
   const statusEl=document.getElementById('todayShiftStatus');
-  const rangeEl=document.getElementById('todayShiftRange');
   const startEl=document.getElementById('todayShiftStart');
   const endEl=document.getElementById('todayShiftEnd');
   if(!shift||shift==='休'){
@@ -582,7 +691,7 @@ function updateTodayShift(){
     bar.style.width='0%';pctEl.textContent='--';
     statusEl.textContent='休息';
     statusEl.style.color='var(--muted)';statusEl.style.background='#e2e5ec';
-    rangeEl.textContent='今天休息';startEl.textContent='--';endEl.textContent='--';
+    startEl.textContent='--';endEl.textContent='--';
     return;
   }
   card.style.background='var(--card)';
@@ -622,7 +731,6 @@ function updateTodayShift(){
   const fmt=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
   let sTxt=fmt(sMin), eTxt=eMin<=1440?fmt(eMin):fmt(eMin-1440);
   if(eMin>1440 && nowMin>=sMin){ eTxt=fmt(eMin-1440)+' 次日'; }
-  rangeEl.textContent=sTxt+' - '+eTxt;
   startEl.textContent=sTxt;
   endEl.textContent=eTxt;
 }
@@ -665,14 +773,48 @@ function shiftCalMonth(d){
 function openShiftPick(dateKey){
   pickDateKey=dateKey;
   document.getElementById('shiftPickTitle').textContent=dateKey+' 班次';
+  renderShiftPickBtns();
+  document.getElementById('shiftPickModal').classList.add('show');
+}
+function shiftBtnHtml(l,c){
+  return `<div class="shift-btn-wrap" data-label="${l}" style="position:relative">
+    <button class="shift-btn" data-label="${l}" style="width:100%;padding:18px 0 13px;border:0;border-radius:12px;font-weight:700;color:#fff;background:${c};position:relative">${l}</button>
+    <span class="shift-del" data-label="${l}" style="position:absolute;top:4px;right:6px;font-size:15px;line-height:1;color:rgba(255,255,255,.85);cursor:pointer">×</span>
+  </div>`;
+}
+function renderShiftPickBtns(){
   const colors=shiftColors();
   const labels=allShiftLabels();
   const box=document.getElementById('shiftPickBtns');
   box.innerHTML=labels.map(l=>{
     const c=colors[l]||'#8b919d';
-    return `<button onclick='confirmShift("${l}")' style="padding:13px 0;border:0;border-radius:12px;font-weight:700;color:#fff;background:${c}">${l}</button>`;
+    return shiftBtnHtml(l,c);
   }).join('');
-  document.getElementById('shiftPickModal').classList.add('show');
+  box.querySelectorAll('.shift-btn').forEach(b=>{
+    b.onclick=()=>confirmShift(b.dataset.label);
+  });
+  box.querySelectorAll('.shift-del').forEach(s=>{
+    s.onclick=(e)=>{e.stopPropagation();delShiftLabelFromPick(s.dataset.label,e)};
+  });
+}
+function delShiftLabelFromPick(l, ev){
+  if(ev) ev.stopPropagation();
+  const btn=ev&&ev.target;
+  if(btn.dataset.arm!=='1'){
+    btn.dataset.arm='1';
+    btn.textContent='✓';
+    btn.style.color='#fff';
+    setTimeout(()=>{
+      btn.dataset.arm='0';
+      btn.textContent='×';
+      btn.style.color='rgba(255,255,255,.85)';
+    },2000);
+    return;
+  }
+  if(data.shiftColors) delete data.shiftColors[l];
+  if(data.shiftOverrides) Object.keys(data.shiftOverrides).forEach(k=>{if(data.shiftOverrides[k]===l) delete data.shiftOverrides[k]});
+  if(Array.isArray(data.shiftPattern)) data.shiftPattern=data.shiftPattern.filter(x=>x!==l);
+  save();renderShiftPickBtns();renderShiftCal();toast('已删除 '+l);
 }
 function addShiftLabel(){
   const nameEl=document.getElementById('newShiftName');
@@ -684,12 +826,7 @@ function addShiftLabel(){
   data.shiftColors=colors;
   save();
   nameEl.value='';
-  // 直接往按钮网格里插入新按钮
-  const btn=document.createElement('button');
-  btn.textContent=n;
-  btn.style.cssText='padding:13px 0;border:0;border-radius:12px;font-weight:700;color:#fff;background:'+colorEl.value;
-  btn.onclick=()=>confirmShift(n);
-  document.getElementById('shiftPickBtns').appendChild(btn);
+  renderShiftPickBtns();
   toast('已添加 '+n);
 }
 function confirmShift(label){
@@ -720,7 +857,19 @@ function renderShiftColorList(){
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
       <span style="flex:1;font-size:14px">${l}</span>
       <input type="color" value="${colors[l]||'#8b919d'}" data-label="${l}" style="width:50px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px">
+      <button onclick="delShiftLabel('${l}')" style="border:0;background:#fdecec;color:var(--red);width:30px;height:30px;border-radius:9px;font-size:14px" title="删除">🗑</button>
     </div>`).join('');
+}
+function delShiftLabel(l){
+  if(!confirm('删除班次「'+l+'」？\n已用此班次的日期会恢复循环默认。'))return;
+  if(data.shiftColors) delete data.shiftColors[l];
+  if(data.shiftOverrides){
+    Object.keys(data.shiftOverrides).forEach(k=>{if(data.shiftOverrides[k]===l) delete data.shiftOverrides[k]});
+  }
+  if(Array.isArray(data.shiftPattern)){
+    data.shiftPattern=data.shiftPattern.filter(x=>x!==l);
+  }
+  save();renderShiftColorList();renderShiftCal();toast('已删除 '+l);
 }
 function saveShiftSettings(){
   const sd=document.getElementById('shiftStartDate').value;
@@ -738,7 +887,7 @@ function saveShiftSettings(){
   data.shiftStartTime=document.getElementById('shiftStartTime').value;
   save();renderShiftCal();updateTodayShift();closeShiftSettings();toast('排班设置已保存');
 }
-function renderDays(c, expectedDaily){
+function renderDays(c, expectedAt){
   if(!calendarStart) calendarStart=new Date(c.s);
   const days=document.getElementById('days'); days.innerHTML='';
   const todayKey=fmtDate(new Date());
@@ -747,11 +896,12 @@ function renderDays(c, expectedDaily){
     const key=fmtDate(d);
     const el=document.createElement('div');
     const spentDay=data.expenses.filter(x=>x.date===key).reduce((a,x)=>a+(+x.amount||0),0);
+    const exp=typeof expectedAt==='function'?expectedAt(key):0;
     let cls='day ';
     if(key===todayKey) cls+='today ';
     if(key===selectedDate) cls+='selected ';
-    if(expectedDaily>0 && key<=todayKey){
-      if(spentDay>expectedDaily) cls+='over ';
+    if(exp>0 && key<=todayKey){
+      if(spentDay>exp) cls+='over ';
       else cls+='under ';
     }
     el.className=cls.trim();
@@ -846,6 +996,65 @@ function exportData(){
   a.click();
   toast('已导出备份文件');
 }
+function exportText(){
+  const lines=['# 消费记录备份 v1'];
+  lines.push('# 周期预算:'+(data.monthBudget||0));
+  lines.push('# 分类:'+(data.categories||[]).join(','));
+  lines.push('# 记录:日期|物品|分类|金额');
+  data.expenses.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(x=>{
+    lines.push([x.date,x.item||'',x.category||'',(+x.amount).toFixed(2)].join('|'));
+  });
+  openTextModal('导出文本（长按全选复制）',lines.join('\n'),true);
+}
+function importText(){
+  openTextModal('粘贴备份文本，点解析导入','',false);
+}
+function openTextModal(title,text,isExport){
+  let m=document.getElementById('textModal');
+  if(!m){
+    m=document.createElement('div');m.id='textModal';m.className='modal';
+    m.innerHTML='<div class="sheet"><h3 id="textModalTitle"></h3><textarea id="textModalArea" style="width:100%;height:260px;border:1px solid var(--line);background:#f8f9fc;border-radius:12px;padding:12px;font-size:12px;font-family:monospace;outline:none;resize:vertical"></textarea><div class="actions"><button class="cancel" onclick="closeTextModal()">关闭</button><button class="save" id="textModalBtn"></button></div></div>';
+    document.body.appendChild(m);
+  }
+  document.getElementById('textModalTitle').textContent=title;
+  document.getElementById('textModalArea').value=text;
+  const btn=document.getElementById('textModalBtn');
+  btn.textContent=isExport?'复制':'解析导入';
+  btn.onclick=isExport?copyText:parseText;
+  m.classList.add('show');
+}
+function closeTextModal(){document.getElementById('textModal').classList.remove('show')}
+function copyText(){
+  const ta=document.getElementById('textModalArea');
+  ta.select();ta.setSelectionRange(0,99999);
+  try{document.execCommand('copy');toast('已复制，去备忘录粘贴')}catch(e){alert('请长按文本手动复制')}
+}
+function parseText(){
+  const txt=document.getElementById('textModalArea').value.trim();
+  if(!txt){alert('请先粘贴文本');return}
+  const lines=txt.split('\n');
+  const adds=[];
+  let catFromTxt=[];
+  lines.forEach(line=>{
+    line=line.trim();
+    if(!line||line.startsWith('#')){
+      if(line.startsWith('# 分类:')) catFromTxt=line.slice(6).split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+      return;
+    }
+    const p=line.split('|');
+    if(p.length>=4){
+      const date=p[0].trim(),item=p[1].trim(),cat=p[2].trim(),amount=parseFloat(p[3]);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&amount>0){
+        adds.push({id:Date.now()+Math.random(),item,amount,category:cat,date});
+      }
+    }
+  });
+  if(!adds.length){alert('没解析到有效记录，请检查文本格式');return}
+  if(!confirm('解析到 '+adds.length+' 条记录，追加到当前记录？'))return;
+  if(catFromTxt.length) data.categories=Array.from(new Set([...catFromTxt,...(data.categories||[])]));
+  data.expenses.push(...adds);
+  save();closeTextModal();render();toast('已导入 '+adds.length+' 条');
+}
 function importData(ev){
   const f=ev.target.files[0]; if(!f)return;
   const r=new FileReader();
@@ -904,10 +1113,132 @@ async function postMessage(){
   document.getElementById('msgText').value='';
   loadMessages();toast('留言已发送');
 }
+window.doLogin=doLogin;
+window.doAdminLogin2=doAdminLogin2;
+window.checkAdminFromSettings=checkAdminFromSettings;
+window.doLogout=doLogout;
+window.addAccount=addAccount;
+window.delAccount=delAccount;
+window.changeAdminPass=changeAdminPass;
 (async function init(){
   await loadCloud();
-  render();
+  // 自动登录
+  const savedUser=localStorage.getItem(KEY+'_user');
+  if(savedUser && root.accounts[savedUser]){
+    loadUser(savedUser);
+    document.getElementById('loginModal').classList.remove('show');
+    render();
+  } else if(Object.keys(root.accounts).length===0){
+    // 首次使用，自动登录 admin
+    loadUser('admin');
+    root.accounts['admin']=root.adminPassword;
+    document.getElementById('loginModal').classList.remove('show');
+    render();
+  } else {
+    // 停留登录页
+  }
 })();
+function checkAdminFromSettings(){
+  const p=document.getElementById('setAdminPass').value;
+  if(p===root.adminPassword){
+    document.getElementById('adminSettingsArea').style.display='block';
+    renderAccountList();
+    toast('管理员已验证');
+  } else alert('管理员密码错误');
+}
+function doLogout(){
+  localStorage.removeItem(KEY+'_user');
+  location.reload();
+}
+function logout(){doLogout()}
+function doLogin(){
+  var u=document.getElementById('loginUser').value.trim();
+  var p=document.getElementById('loginPass').value;
+  if(!u||!p){alert('请输入账号和密码');return}
+  if(root.accounts[u]===p){
+    loadUser(u);
+    document.getElementById('loginModal').classList.remove('show');
+    render();toast('欢迎 '+u);
+  } else {
+    alert('账号或密码错误');
+  }
+}
+function doAdminLogin2(){
+  var p=document.getElementById('adminPass2').value;
+  if(p===root.adminPassword){
+    document.getElementById('loginModal').classList.remove('show');
+    loadUser('admin');
+    render();
+    toast('欢迎管理员');
+  } else alert('管理员密码错误');
+}
+function openAdminLogin(fromSettings){
+  const p=prompt('请输入管理员密码：');
+  if(p===null) return;
+  if(p===root.adminPassword){
+    if(fromSettings){
+      openAdminPanel();
+    } else {
+      document.getElementById('loginModal').classList.remove('show');
+      loadUser('admin');
+      render();
+      toast('欢迎管理员');
+    }
+  } else alert('管理员密码错误');
+}
+function closeAdminLogin(){document.getElementById('adminLoginModal').classList.remove('show')}
+function doAdminLogin(){
+  const p=document.getElementById('adminPass').value;
+  if(p===root.adminPassword){
+    closeAdminLogin();
+    if(adminLogin._fromSettings){
+      openAdminPanel();
+    } else {
+      document.getElementById('loginModal').classList.remove('show');
+      loadUser('admin');
+      render();
+      toast('欢迎管理员');
+    }
+  } else alert('管理员密码错误');
+}
+function openAdminPanel(){
+  document.getElementById('adminWho').textContent=currentUser||'未登录';
+  renderAccountList();
+  document.getElementById('adminPanelModal').classList.add('show');
+}
+function closeAdminPanel(){document.getElementById('adminPanelModal').classList.remove('show')}
+function renderAccountList(){
+  const box=document.getElementById('accountList');
+  box.innerHTML=Object.keys(root.accounts).map(u=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+      <div><div style="font-size:14px;font-weight:600">${u}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${u==='admin'?'管理员（不可删）':'普通账号 · 密码: '+root.accounts[u]}</div></div>
+      ${u!=='admin'?`<button onclick="delAccount('${u}')" style="border:0;background:#fdecec;color:var(--red);padding:8px 12px;border-radius:10px;font-weight:700;font-size:12px">删除</button>`:''}
+    </div>`).join('')||'<div class="empty">暂无账号</div>';
+}
+function addAccount(){
+  const u=document.getElementById('newAccount').value.trim();
+  const p=document.getElementById('newAccountPass').value;
+  if(!u||!p){alert('请输入账号和密码');return}
+  if(root.accounts[u]){alert('账号已存在');return}
+  root.accounts[u]=p;
+  root.users[u]={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};
+  save();renderAccountList();
+  document.getElementById('newAccount').value='';document.getElementById('newAccountPass').value='';
+  toast('已添加账号 '+u);
+}
+function delAccount(u){
+  delete root.accounts[u];delete root.users[u];
+  save();renderAccountList();toast('已删除 '+u);
+}
+function changeAdminPass(){
+  const p=document.getElementById('newAdminPass').value;
+  if(!p||p.length<4){alert('新密码至少 4 位');return}
+  root.adminPassword=p;
+  root.accounts['admin']=p;
+  save();
+  document.getElementById('newAdminPass').value='';
+  toast('管理员密码已修改');
+}
 </script>
 </body>
 </html>
