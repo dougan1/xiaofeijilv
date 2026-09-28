@@ -226,7 +226,11 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
         <button onclick="shiftCalMonth(1)">›</button>
       </div>
       <div class="days" id="shiftDaysGrid" style="margin-top:12px"></div>
-      <div class="notice" style="margin-top:10px">点某天格子可单独改班次；右上角 ⚙️ 改循环规则和颜色。</div>
+      <div class="notice" style="margin-top:10px">右上角 ⚙️ 改循环规则和颜色。</div>
+    </div>
+    <div id="quickBar" style="display:none;gap:8px;margin:8px 16px;padding:10px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);overflow-x:auto;align-items:center;flex-wrap:nowrap">
+      <button onclick="quickPaint('休')" style="flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:#8b919d">休假</button>
+      <button onclick="quickAdd()" style="flex:0 0 auto;width:42px;height:42px;border:1px dashed var(--primary);background:#eef0ff;color:var(--primary);border-radius:10px;font-size:20px">+</button>
     </div>
   </div>
 
@@ -250,7 +254,13 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
  <div class="sheet">
   <h3>排班设置</h3>
   <div class="field"><label>开始日期（循环起点）</label><input id="shiftStartDate" type="date"></div>
-  <div class="field"><label>循环模式（逗号分隔班次名）</label><input id="shiftPatternInput" placeholder="例如：白,夜,休,白,夜,休,休,休"></div>
+  <div style="display:flex;gap:10px;margin-bottom:12px">
+    <button id="btnQuickToggle" onclick="toggleQuickMode()" style="flex:1;padding:12px;border:1.5px solid var(--line);background:#f8f9fc;border-radius:12px;font-weight:700;font-size:13px">选假模式</button>
+    <button id="btnCycleToggle" onclick="toggleCycleInput()" style="flex:1;padding:12px;border:1.5px solid var(--line);background:#f8f9fc;border-radius:12px;font-weight:700;font-size:13px">循环模式</button>
+  </div>
+  <div id="cycleInputBox" style="display:none;margin-bottom:12px">
+    <div class="field"><label>循环模式（示例：白夜休白夜休休休）</label><input id="shiftPatternInput" placeholder="白夜休白夜休休休"></div>
+  </div>
   <div class="field"><label>班次颜色</label><div id="shiftColorList"></div></div>
   <div class="row">
     <div class="field"><label>班次时长</label>
@@ -259,6 +269,7 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
     <div class="field"><label>班次开始时间</label><input id="shiftStartTime" type="time" value="08:00"></div>
   </div>
   <div class="notice">夜班跨天：若开始时间+时长跨过 24:00，进度会自动算到次日凌晨。"休"班不显示进度。</div>
+  <button onclick="clearShiftOverrides()" style="width:100%;border:1px solid var(--red);background:#fdecec;color:var(--red);border-radius:10px;padding:11px;font-weight:700;margin-bottom:10px">一键清除所有手动标记</button>
   <div class="actions"><button class="cancel" onclick="closeShiftSettings()">取消</button><button class="save" onclick="saveShiftSettings()">保存</button></div>
  </div>
 </div>
@@ -380,7 +391,10 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
  <div class="sheet">
   <h3>主页设置</h3>
   <div class="field"><label>周期可使用金额（元）</label><input id="monthBudget" type="number" min="0" step="0.01" placeholder="例如 930"></div>
-  <button class="save" style="width:100%;border:0;border-radius:12px;padding:11px;background:var(--primary);color:#fff;font-weight:700;margin-bottom:14px" onclick="saveSettings()">保存预算</button>
+  <div class="field"><label>周期开始日期</label><input id="cycleStartDate" type="date"></div>
+  <div class="field"><label>周期天数（自动算结束日期）</label><input id="cycleDays" type="number" min="1" max="60" placeholder="例如 31"></div>
+  <div class="notice" style="margin-bottom:10px">不设置则默认每月25号至次月25号。开始日期+天数=一个周期，下个周期自动顺延。</div>
+  <button class="save" style="width:100%;border:0;border-radius:12px;padding:11px;background:var(--primary);color:#fff;font-weight:700;margin-bottom:14px" onclick="saveHomeSettings()">保存设置</button>
   <div style="font-size:13px;font-weight:700;margin-bottom:8px">消费分类</div>
   <div id="catList"></div>
   <div class="cat-add">
@@ -395,12 +409,12 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
   <h3>登录</h3>
   <div class="field"><label>账号</label><input id="loginUser" placeholder="输入账号"></div>
   <div class="field"><label>密码</label><input id="loginPass" type="password" placeholder="输入密码"></div>
-  <div class="actions"><button class="save" style="flex:1" onclick="window.doLogin()">登录</button></div>
+  <div class="actions"><button class="save" style="flex:1" onclick="doLogin()">登录</button></div>
   <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
     <div style="font-size:12px;color:var(--muted);margin-bottom:6px">—— 管理员登录 ——</div>
     <div style="display:flex;gap:8px">
       <input id="adminPass2" type="password" placeholder="管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-      <button onclick="window.doAdminLogin2()" style="border:0;background:#333;color:#fff;border-radius:10px;padding:0 16px;font-weight:700">进入</button>
+      <button onclick="doAdminLogin2()" style="border:0;background:#333;color:#fff;border-radius:10px;padding:0 16px;font-weight:700">进入</button>
     </div>
   </div>
  </div>
@@ -456,6 +470,17 @@ function cycleStart(date=new Date()){
   return new Date(d.getFullYear(),d.getMonth()-1,25);
 }
 function getCycle(offset=0){
+  // 自定义周期
+  if(data.cycleStartDate && data.cycleDays>0){
+    const s0=new Date(data.cycleStartDate+'T00:00:00');
+    s0.setDate(s0.getDate()+offset*data.cycleDays);
+    const e=new Date(s0);
+    e.setDate(e.getDate()+data.cycleDays-1);
+    let arr=[], cur=new Date(s0);
+    while(cur<=e){arr.push(new Date(cur));cur.setDate(cur.getDate()+1)}
+    return {s:s0,e,arr};
+  }
+  // 默认：25号至次月25号
   const s0=cycleStart();
   const s=new Date(s0.getFullYear(),s0.getMonth()+offset,25);
   const e=new Date(s.getFullYear(),s.getMonth()+1,25);
@@ -506,12 +531,35 @@ function switchTab(t){
   document.getElementById('page-'+t).classList.add('show');
   document.querySelectorAll('.tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
   if(t==='tools'){loadMessages()}
-  if(t==='shift'){initShift()}
+  if(t==='shift'){
+    initShift();
+    if(!data.shiftStartDate && !localStorage.getItem('onb_shift_'+currentUser)){
+      localStorage.setItem('onb_shift_'+currentUser,'1');
+      setTimeout(()=>toast('👆 点右上角 ⚙️ 设置排班起始日'),800);
+    }
+  }
+  if(t==='home'){
+    if(!data.monthBudget && !localStorage.getItem('onb_home_'+currentUser)){
+      localStorage.setItem('onb_home_'+currentUser,'1');
+      setTimeout(()=>{toast('👆 点右上角 ⚙️ 设置预算和周期');openHomeSettings();},600);
+    }
+  }
 }
 function openHomeSettings(){
   document.getElementById('monthBudget').value=data.monthBudget||'';
+  document.getElementById('cycleStartDate').value=data.cycleStartDate||'';
+  document.getElementById('cycleDays').value=data.cycleDays||'';
   renderCats();
   document.getElementById('homeSettingsModal').classList.add('show');
+}
+function saveHomeSettings(){
+  data.monthBudget=parseFloat(document.getElementById('monthBudget').value)||0;
+  const sd=document.getElementById('cycleStartDate').value;
+  const cd=parseInt(document.getElementById('cycleDays').value)||0;
+  if(sd && cd>0){data.cycleStartDate=sd;data.cycleDays=cd}
+  else {delete data.cycleStartDate;delete data.cycleDays}
+  selectedOffset=0;
+  save();closeHomeSettings();toast('设置已保存');
 }
 function closeHomeSettings(){
   document.getElementById('homeSettingsModal').classList.remove('show');
@@ -605,6 +653,8 @@ function allShiftLabels(){
 }
 function getShiftOf(dateKey){
   if(data.shiftOverrides&&data.shiftOverrides[dateKey]) return data.shiftOverrides[dateKey];
+  if(data.useQuickMode) return data.quickDefault||'白';
+  if(quickModeOn) return null;
   if(!data.shiftStart) return null;
   const sp=data.shiftStart.split('-').map(Number);
   const s=new Date(sp[0],sp[1]-1,sp[2]);
@@ -762,9 +812,181 @@ function renderShiftCal(){
     } else {
       el.innerHTML=`<div class="d">${m+1}/${d}</div><strong>${d}</strong><small>--</small>`;
     }
-    el.onclick=()=>openShiftPick(key);
+    el.onclick=()=>{
+      if(quickModeOn && paintLabel){
+        if(!data.shiftOverrides) data.shiftOverrides={};
+        data.shiftOverrides[key]=paintLabel;
+        save();renderShiftCal();
+        toast(key+' → '+paintLabel);
+      } else if(quickModeOn){
+        toast('先点下面的按钮选要标什么');
+      } else openShiftPick(key);
+    };
     grid.appendChild(el);
   }
+}
+let quickModeOn=false;
+let paintLabel=null;
+function toggleQuickMode(){
+  const on=!quickModeOn;
+  quickModeOn=on;
+  document.getElementById('btnQuickToggle').style.background=on?'var(--primary)':'#f8f9fc';
+  document.getElementById('btnQuickToggle').style.color=on?'#fff':'var(--text)';
+  document.getElementById('btnQuickToggle').style.borderColor=on?'var(--primary)':'var(--line)';
+  // 互斥：关闭循环
+  document.getElementById('cycleInputBox').style.display='none';
+  document.getElementById('btnCycleToggle').style.background='#f8f9fc';
+  document.getElementById('btnCycleToggle').style.color='var(--text)';
+  document.getElementById('btnCycleToggle').style.borderColor='var(--line)';
+  document.getElementById('quickBar').style.display=on?'flex':'none';
+  paintLabel=null;
+  if(on){renderQuickBar();toast('选假模式已打开：点下面按钮再点日期');}
+}
+function toggleCycleInput(){
+  const box=document.getElementById('cycleInputBox');
+  const on=box.style.display!=='block';
+  box.style.display=on?'block':'none';
+  document.getElementById('btnCycleToggle').style.background=on?'var(--primary)':'#f8f9fc';
+  document.getElementById('btnCycleToggle').style.color=on?'#fff':'var(--text)';
+  document.getElementById('btnCycleToggle').style.borderColor=on?'var(--primary)':'var(--line)';
+  // 互斥：关闭选假
+  if(on){
+    quickModeOn=false;
+    data.useQuickMode=false;
+    save();
+    document.getElementById('btnQuickToggle').style.background='#f8f9fc';
+    document.getElementById('btnQuickToggle').style.color='var(--text)';
+    document.getElementById('btnQuickToggle').style.borderColor='var(--line)';
+    document.getElementById('quickBar').style.display='none';
+  }
+  renderShiftCal();
+}
+function quickPaint(label){
+  paintLabel=label;
+  if(label==='白'||label==='夜'){
+    data.quickDefault=label;save();
+    toast('默认班次已设为：'+label+'，现在点日历标记特殊日期');
+  } else {
+    toast('涂抹模式：点日期标 '+label);
+  }
+  document.querySelectorAll('#quickBar button[data-label]').forEach(b=>{
+    if(b.dataset.label===label){
+      b.style.outline='3px solid var(--primary)';
+      b.style.outlineOffset='2px';
+    } else {
+      b.style.outline='';
+    }
+  });
+  toast('涂抹模式：点日期标 '+label);
+}
+function quickSave(){
+  quickModeOn=false;
+  paintLabel=null;
+  data.useQuickMode=true;
+  document.getElementById('quickBar').style.display='none';
+  document.getElementById('btnQuickToggle').style.background='#f8f9fc';
+  document.getElementById('btnQuickToggle').style.color='var(--text)';
+  document.getElementById('btnQuickToggle').style.borderColor='var(--line)';
+  save();renderShiftCal();
+  toast('已保存排班');
+}
+function quickAdd(){
+  const bar=document.getElementById('quickBar');
+  const old=document.getElementById('quickAddInput');
+  if(old){old.focus();return}
+  const input=document.createElement('input');
+  input.id='quickAddInput';
+  input.placeholder='输入班次名，如年假';
+  input.style.cssText='flex:0 0 140px;padding:10px 12px;border:1px solid var(--primary);border-radius:10px;outline:none;font-size:14px';
+  const confirm=document.createElement('button');
+  confirm.textContent='加';
+  confirm.style.cssText='flex:0 0 auto;padding:10px 14px;border:0;background:var(--primary);color:#fff;border-radius:10px;font-weight:700';
+  confirm.onclick=()=>{
+    const n=input.value.trim();
+    if(!n){toast('请输入名称');return}
+    if(!data.quickLabels) data.quickLabels=[];
+    if(!data.quickLabels.includes(n)){
+      data.quickLabels.push(n);
+      const colors=shiftColors();
+      if(!colors[n]) colors[n]='#5b67f1';
+      data.shiftColors=colors;
+      save();
+    }
+    renderQuickBar();
+    toast('已添加 '+n);
+  };
+  input.onkeydown=e=>{if(e.key==='Enter')confirm.click()};
+  bar.appendChild(input);
+  bar.appendChild(confirm);
+  input.focus();
+}
+function renderQuickBar(){
+  const bar=document.getElementById('quickBar');
+  bar.innerHTML='';
+  bar.style.display='flex';
+  bar.style.flexDirection='column';
+  bar.style.gap='12px';
+  const colors=shiftColors();
+  // 第一步：选择默认班次
+  const step1=document.createElement('div');
+  step1.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)">第一步：选择默认班次（未标记的日期自动使用）</div>';
+  const row1=document.createElement('div');
+  row1.style.cssText='display:flex;gap:10px;width:100%';
+  const makeMain=(label)=>{
+    const b=document.createElement('button');
+    b.textContent=label;
+    b.dataset.label=label;
+    b.style.cssText=`flex:1;padding:16px 0;border:0;border-radius:12px;font-weight:700;color:#fff;background:${colors[label]||'#8b919d'};font-size:18px`;
+    b.onclick=()=>{quickPaint(label);step2.style.display='block';};
+    row1.appendChild(b);
+  };
+  makeMain('白');
+  makeMain('夜');
+  step1.appendChild(row1);
+  bar.appendChild(step1);
+  // 第二步：标记特殊日期
+  const step2=document.createElement('div');
+  step2.id='quickStep2';
+  step2.style.display=data.quickDefault?'block':'none';
+  step2.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)">第二步：点下面按钮再点日期，标记休班或其他</div>';
+  const row2=document.createElement('div');
+  row2.style.cssText='display:flex;gap:8px;width:100%;flex-wrap:wrap;align-items:center';
+  const rest=document.createElement('button');
+  rest.textContent='休';
+  rest.dataset.label='休';
+  rest.style.cssText='flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:#8b919d';
+  rest.onclick=()=>quickPaint('休');
+  row2.appendChild(rest);
+  (data.quickLabels||[]).forEach(l=>{
+    const c=colors[l]||'#5b67f1';
+    const b=document.createElement('button');
+    b.textContent=l;
+    b.dataset.label=l;
+    b.style.cssText=`flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:${c}`;
+    b.onclick=()=>quickPaint(l);
+    row2.appendChild(b);
+  });
+  const add=document.createElement('button');
+  add.style.cssText='flex:0 0 auto;width:42px;height:42px;border:1px dashed var(--primary);background:#eef0ff;color:var(--primary);border-radius:10px;font-size:20px';
+  add.textContent='+';
+  add.onclick=quickAdd;
+  row2.appendChild(add);
+  const save=document.createElement('button');
+  save.textContent='保存';
+  save.style.cssText='flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:var(--green)';
+  save.onclick=quickSave;
+  row2.appendChild(save);
+  step2.appendChild(row2);
+  bar.appendChild(step2);
+  // 恢复选中态
+  if(data.quickDefault) quickPaint(data.quickDefault);
+}
+function clearShiftOverrides(){
+  data.shiftOverrides={};
+  data.shiftStart=null;
+  data.shiftPattern=null;
+  data.quickLabels=[];
+  save();renderShiftCal();toast('已清除全部排班标记');
 }
 function shiftCalMonth(d){
   shiftCalCursor.setMonth(shiftCalCursor.getMonth()+d);
@@ -777,9 +999,10 @@ function openShiftPick(dateKey){
   document.getElementById('shiftPickModal').classList.add('show');
 }
 function shiftBtnHtml(l,c){
+  const deletable=!['白','夜','休'].includes(l);
   return `<div class="shift-btn-wrap" data-label="${l}" style="position:relative">
     <button class="shift-btn" data-label="${l}" style="width:100%;padding:18px 0 13px;border:0;border-radius:12px;font-weight:700;color:#fff;background:${c};position:relative">${l}</button>
-    <span class="shift-del" data-label="${l}" style="position:absolute;top:4px;right:6px;font-size:15px;line-height:1;color:rgba(255,255,255,.85);cursor:pointer">×</span>
+    ${deletable?`<span class="shift-del" data-label="${l}" style="position:absolute;top:4px;right:6px;font-size:15px;line-height:1;color:rgba(255,255,255,.85);cursor:pointer">×</span>`:''}
   </div>`;
 }
 function renderShiftPickBtns(){
@@ -799,6 +1022,7 @@ function renderShiftPickBtns(){
 }
 function delShiftLabelFromPick(l, ev){
   if(ev) ev.stopPropagation();
+  if(['白','夜','休'].includes(l)){toast('默认班次不可删除');return}
   const btn=ev&&ev.target;
   if(btn.dataset.arm!=='1'){
     btn.dataset.arm='1';
@@ -853,21 +1077,30 @@ function closeShiftSettings(){document.getElementById('shiftSettingsModal').clas
 function renderShiftColorList(){
   const labels=allShiftLabels();
   const colors=shiftColors();
-  document.getElementById('shiftColorList').innerHTML=labels.map((l,i)=>`
+  document.getElementById('shiftColorList').innerHTML=labels.map((l,i)=>{
+    const canDel=!['白','夜','休'].includes(l);
+    return `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
-      <span style="flex:1;font-size:14px">${l}</span>
+      <span style="flex:1;font-size:14px">${l}${canDel?'':' <small style="color:var(--muted)">(默认)</small>'}</span>
       <input type="color" value="${colors[l]||'#8b919d'}" data-label="${l}" style="width:50px;height:34px;border:1px solid var(--line);border-radius:8px;padding:2px">
-      <button onclick="delShiftLabel('${l}')" style="border:0;background:#fdecec;color:var(--red);width:30px;height:30px;border-radius:9px;font-size:14px" title="删除">🗑</button>
-    </div>`).join('');
+      ${canDel?`<button class="del-shift-btn" data-label="${l}" style="border:0;background:#fdecec;color:var(--red);width:30px;height:30px;border-radius:9px;font-size:14px" title="删除">🗑</button>`:''}
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.del-shift-btn').forEach(b=>{
+    b.onclick=()=>delShiftLabel(b.dataset.label);
+  });
 }
 function delShiftLabel(l){
-  if(!confirm('删除班次「'+l+'」？\n已用此班次的日期会恢复循环默认。'))return;
+  if(['白','夜','休'].includes(l)){toast('默认班次不可删除');return}
   if(data.shiftColors) delete data.shiftColors[l];
   if(data.shiftOverrides){
     Object.keys(data.shiftOverrides).forEach(k=>{if(data.shiftOverrides[k]===l) delete data.shiftOverrides[k]});
   }
   if(Array.isArray(data.shiftPattern)){
     data.shiftPattern=data.shiftPattern.filter(x=>x!==l);
+  }
+  if(Array.isArray(data.quickLabels)){
+    data.quickLabels=data.quickLabels.filter(x=>x!==l);
   }
   save();renderShiftColorList();renderShiftCal();toast('已删除 '+l);
 }
@@ -1124,18 +1357,18 @@ window.changeAdminPass=changeAdminPass;
   await loadCloud();
   // 自动登录
   const savedUser=localStorage.getItem(KEY+'_user');
-  if(savedUser && root.accounts[savedUser]){
+  const savedTime=+localStorage.getItem(KEY+'_loginTime')||0;
+  const sevenDays=7*24*60*60*1000;
+  if(savedUser && root.accounts[savedUser] && (Date.now()-savedTime)<sevenDays){
     loadUser(savedUser);
     document.getElementById('loginModal').classList.remove('show');
     render();
   } else if(Object.keys(root.accounts).length===0){
-    // 首次使用，自动登录 admin
     loadUser('admin');
     root.accounts['admin']=root.adminPassword;
+    localStorage.setItem(KEY+'_loginTime',Date.now());
     document.getElementById('loginModal').classList.remove('show');
     render();
-  } else {
-    // 停留登录页
   }
 })();
 function checkAdminFromSettings(){
@@ -1157,6 +1390,7 @@ function doLogin(){
   if(!u||!p){alert('请输入账号和密码');return}
   if(root.accounts[u]===p){
     loadUser(u);
+    localStorage.setItem(KEY+'_loginTime',Date.now());
     document.getElementById('loginModal').classList.remove('show');
     render();toast('欢迎 '+u);
   } else {
@@ -1168,6 +1402,7 @@ function doAdminLogin2(){
   if(p===root.adminPassword){
     document.getElementById('loginModal').classList.remove('show');
     loadUser('admin');
+    localStorage.setItem(KEY+'_loginTime',Date.now());
     render();
     toast('欢迎管理员');
   } else alert('管理员密码错误');
