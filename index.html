@@ -219,6 +219,22 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
         <span style="font-size:11px;color:var(--muted)">结束 <b id="todayShiftEnd" style="color:var(--text);font-size:13px">--</b></span>
       </div>
     </div>
+    <div style="display:flex;gap:10px;margin:8px 16px">
+      <button id="btnQuickToggle" onclick="toggleQuickMode()" style="flex:1;padding:13px;border:1.5px solid var(--line);background:#fff;border-radius:12px;font-weight:700;font-size:14px">选假模式</button>
+      <button id="btnCycleToggle" onclick="toggleCycleInput()" style="flex:1;padding:13px;border:1.5px solid var(--line);background:#fff;border-radius:12px;font-weight:700;font-size:14px">循环模式</button>
+    </div>
+    <div id="cycleInputBox" style="display:none;margin:0 16px 8px;padding:12px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.04)">
+      <div class="field" style="margin:0 0 8px"><label>开始日期（循环起点）</label><input id="shiftStartDate" type="date"></div>
+      <div class="row" style="margin:0 0 8px">
+        <div class="field" style="margin:0"><label>时长</label><select id="shiftHours"><option value="8">8 小时</option><option value="12">12 小时</option></select></div>
+        <div class="field" style="margin:0"><label>开始时间</label><input id="shiftStartTime" type="time" value="08:00"></div>
+      </div>
+      <div class="field" style="margin:0 0 8px"><label>循环规则（逗号分隔，如：白,夜,休）</label><input id="shiftPatternInput" placeholder="白,夜,休,白,夜,休,休,休"></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="saveCyclePattern()" style="flex:1;border:0;background:var(--primary);color:#fff;border-radius:12px;padding:14px;font-weight:700;font-size:16px">保存</button>
+        <button onclick="clearCyclePattern()" style="flex:1;border:1px solid var(--red);background:#fdecec;color:var(--red);border-radius:12px;padding:14px;font-weight:700;font-size:16px">清除</button>
+      </div>
+    </div>
     <div style="margin:8px 16px" class="card">
       <div class="calhead" style="justify-content:space-between">
         <button onclick="shiftCalMonth(-1)">‹</button>
@@ -253,23 +269,7 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 <div class="modal" id="shiftSettingsModal">
  <div class="sheet">
   <h3>排班设置</h3>
-  <div class="field"><label>开始日期（循环起点）</label><input id="shiftStartDate" type="date"></div>
-  <div style="display:flex;gap:10px;margin-bottom:12px">
-    <button id="btnQuickToggle" onclick="toggleQuickMode()" style="flex:1;padding:12px;border:1.5px solid var(--line);background:#f8f9fc;border-radius:12px;font-weight:700;font-size:13px">选假模式</button>
-    <button id="btnCycleToggle" onclick="toggleCycleInput()" style="flex:1;padding:12px;border:1.5px solid var(--line);background:#f8f9fc;border-radius:12px;font-weight:700;font-size:13px">循环模式</button>
-  </div>
-  <div id="cycleInputBox" style="display:none;margin-bottom:12px">
-    <div class="field"><label>循环模式（示例：白夜休白夜休休休）</label><input id="shiftPatternInput" placeholder="白夜休白夜休休休"></div>
-  </div>
   <div class="field"><label>班次颜色</label><div id="shiftColorList"></div></div>
-  <div class="row">
-    <div class="field"><label>班次时长</label>
-      <select id="shiftHours"><option value="8">8 小时</option><option value="12">12 小时</option></select>
-    </div>
-    <div class="field"><label>班次开始时间</label><input id="shiftStartTime" type="time" value="08:00"></div>
-  </div>
-  <div class="notice">夜班跨天：若开始时间+时长跨过 24:00，进度会自动算到次日凌晨。"休"班不显示进度。</div>
-  <button onclick="clearShiftOverrides()" style="width:100%;border:1px solid var(--red);background:#fdecec;color:var(--red);border-radius:10px;padding:11px;font-weight:700;margin-bottom:10px">一键清除所有手动标记</button>
   <div class="actions"><button class="cancel" onclick="closeShiftSettings()">取消</button><button class="save" onclick="saveShiftSettings()">保存</button></div>
  </div>
 </div>
@@ -652,8 +652,10 @@ function allShiftLabels(){
   return Array.from(s);
 }
 function getShiftOf(dateKey){
-  if(data.shiftOverrides&&data.shiftOverrides[dateKey]) return data.shiftOverrides[dateKey];
-  if(data.useQuickMode) return data.quickDefault||'白';
+  if(data.useQuickMode){
+    if(data.shiftOverrides&&data.shiftOverrides[dateKey]) return data.shiftOverrides[dateKey];
+    return data.quickDefault||null;
+  }
   if(quickModeOn) return null;
   if(!data.shiftStart) return null;
   const sp=data.shiftStart.split('-').map(Number);
@@ -745,7 +747,10 @@ function updateTodayShift(){
     return;
   }
   card.style.background='var(--card)';
-  const startMin=shiftStartMin();
+  let startMin=shiftStartMin();
+  if(shift==='夜'){
+    startMin=(startMin+12*60)%1440;
+  }
   const durMin=shiftHours()*60;
   const now=new Date();
   const nowMin=now.getHours()*60+now.getMinutes();
@@ -788,11 +793,19 @@ function renderShiftCal(){
   const y=shiftCalCursor.getFullYear(), m=shiftCalCursor.getMonth();
   document.getElementById('shiftMonthTitle').textContent=`${y}年${m+1}月`;
   const first=new Date(y,m,1);
-  const startOffset=first.getDay();
   const daysInMonth=new Date(y,m+1,0).getDate();
   const grid=document.getElementById('shiftDaysGrid');
   grid.innerHTML='';
+  const weeks=['一','二','三','四','五','六','日'];
+  weeks.forEach(w=>{
+    const h=document.createElement('div');
+    h.style.cssText='text-align:center;font-size:11px;color:var(--muted);padding:2px 0';
+    h.textContent=w;
+    grid.appendChild(h);
+  });
   const todayKey=fmtDate(new Date());
+  // getDay(): 0=日,1=一,...6=六. We want Monday first: offset = (getDay()+6)%7
+  const startOffset=(first.getDay()+6)%7;
   for(let i=0;i<startOffset;i++){
     const ph=document.createElement('div');ph.style.visibility='hidden';grid.appendChild(ph);
   }
@@ -804,13 +817,16 @@ function renderShiftCal(){
     const el=document.createElement('div');
     el.className='day';
     if(key===todayKey) el.style.boxShadow='0 0 0 2px var(--primary) inset';
+    const dow=dt.getDay();
+    const isWeekend=(dow===0||dow===6);
     if(shift){
       const col=colors[shift]||'#8b919d';
-      el.style.background=col+'22';
+      el.style.background=col+(isWeekend?'55':'22');
       el.style.borderColor=col+'66';
-      el.innerHTML=`<div class="d">${m+1}/${d}</div><strong>${d}</strong><small style="color:${col}">${shift}</small>`;
+      el.innerHTML=`<strong>${d}</strong><small style="color:${col}">${shift}</small>`;
     } else {
-      el.innerHTML=`<div class="d">${m+1}/${d}</div><strong>${d}</strong><small>--</small>`;
+      el.style.background=isWeekend?'#d8dbe2':'#fafbfe';
+      el.innerHTML=`<strong>${d}</strong><small>--</small>`;
     }
     el.onclick=()=>{
       if(quickModeOn && paintLabel){
@@ -824,12 +840,19 @@ function renderShiftCal(){
     };
     grid.appendChild(el);
   }
+  updateTodayShift();
 }
 let quickModeOn=false;
 let paintLabel=null;
+function saveQuickTime(){
+  data.shiftHours=+document.getElementById('quickShiftHours').value;
+  data.shiftStartTime=document.getElementById('quickShiftStart').value;
+  save();renderShiftCal();
+}
 function toggleQuickMode(){
   const on=!quickModeOn;
   quickModeOn=on;
+  if(on){data.useQuickMode=true;save();}
   document.getElementById('btnQuickToggle').style.background=on?'var(--primary)':'#f8f9fc';
   document.getElementById('btnQuickToggle').style.color=on?'#fff':'var(--text)';
   document.getElementById('btnQuickToggle').style.borderColor=on?'var(--primary)':'var(--line)';
@@ -841,6 +864,29 @@ function toggleQuickMode(){
   document.getElementById('quickBar').style.display=on?'flex':'none';
   paintLabel=null;
   if(on){renderQuickBar();toast('选假模式已打开：点下面按钮再点日期');}
+  renderShiftCal();
+}
+function clearCyclePattern(){
+  data.shiftStart=null;data.shiftPattern=null;
+  document.getElementById('shiftPatternInput').value='';
+  save();renderShiftCal();toast('已清除循环规则');
+}
+function saveCyclePattern(){
+  const v=document.getElementById('shiftPatternInput').value;
+  const pat=v.split(/[,，]/).map(s=>s.trim()).filter(Boolean);
+  const sd=document.getElementById('shiftStartDate').value;
+  data.shiftStart=sd||data.shiftStart;
+  data.shiftHours=+document.getElementById('shiftHours').value;
+  data.shiftStartTime=document.getElementById('shiftStartTime').value;
+  if(!pat.length){toast('请输入循环规则');return}
+  data.shiftPattern=pat;
+  data.useQuickMode=false;
+  save();renderShiftCal();
+  document.getElementById('cycleInputBox').style.display='none';
+  document.getElementById('btnCycleToggle').style.background='#fff';
+  document.getElementById('btnCycleToggle').style.color='var(--text)';
+  document.getElementById('btnCycleToggle').style.borderColor='var(--line)';
+  toast('已保存循环规则');
 }
 function toggleCycleInput(){
   const box=document.getElementById('cycleInputBox');
@@ -862,19 +908,22 @@ function toggleCycleInput(){
   renderShiftCal();
 }
 function quickPaint(label){
-  paintLabel=label;
   if(label==='白'||label==='夜'){
     data.quickDefault=label;save();
-    toast('默认班次已设为：'+label+'，现在点日历标记特殊日期');
-  } else {
-    toast('涂抹模式：点日期标 '+label);
+    document.querySelectorAll('#quickBar button[data-default]').forEach(b=>{
+      b.style.outline=(b.dataset.default===label)?'3px solid var(--primary)':'3px solid transparent';
+      b.style.outlineOffset='2px';
+    });
+    toast('默认班次已设为：'+label);
+    return;
   }
-  document.querySelectorAll('#quickBar button[data-label]').forEach(b=>{
-    if(b.dataset.label===label){
+  paintLabel=label;
+  document.querySelectorAll('#quickBar button[data-paint]').forEach(b=>{
+    if(b.dataset.paint===label){
       b.style.outline='3px solid var(--primary)';
       b.style.outlineOffset='2px';
     } else {
-      b.style.outline='';
+      b.style.outline='3px solid transparent';
     }
   });
   toast('涂抹模式：点日期标 '+label);
@@ -916,70 +965,103 @@ function quickAdd(){
     toast('已添加 '+n);
   };
   input.onkeydown=e=>{if(e.key==='Enter')confirm.click()};
-  bar.appendChild(input);
-  bar.appendChild(confirm);
+  const addBtn=document.querySelector('#quickBar button:last-of-type');
+  const row2=document.querySelector('#quickBar div:nth-child(2) > div');
+  if(row2){row2.insertBefore(input,row2.lastChild);row2.insertBefore(confirm,row2.lastChild);}
+  else{bar.appendChild(input);bar.appendChild(confirm);}
   input.focus();
 }
 function renderQuickBar(){
   const bar=document.getElementById('quickBar');
   bar.innerHTML='';
-  bar.style.display='flex';
-  bar.style.flexDirection='column';
-  bar.style.gap='12px';
+  bar.style.cssText='display:flex;flex-direction:column;gap:10px;margin:0 16px 8px;padding:14px;background:#fff;border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)';
   const colors=shiftColors();
-  // 第一步：选择默认班次
-  const step1=document.createElement('div');
-  step1.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)">第一步：选择默认班次（未标记的日期自动使用）</div>';
-  const row1=document.createElement('div');
-  row1.style.cssText='display:flex;gap:10px;width:100%';
-  const makeMain=(label)=>{
+  // 时间
+  const timeRow=document.createElement('div');
+  timeRow.className='row';
+  timeRow.innerHTML=`
+    <div class="field" style="margin:0"><label>时长</label><select id="quickShiftHours"><option value="8">8 小时</option><option value="12">12 小时</option></select></div>
+    <div class="field" style="margin:0"><label>开始</label><input id="quickShiftStart" type="time"></div>
+  `;
+  bar.appendChild(timeRow);
+  setTimeout(()=>{
+    document.getElementById('quickShiftHours').value=data.shiftHours||8;
+    document.getElementById('quickShiftStart').value=data.shiftStartTime||'08:00';
+    document.getElementById('quickShiftHours').onchange=saveQuickTime;
+    document.getElementById('quickShiftStart').onchange=saveQuickTime;
+  },0);
+  // 默认班次
+  const s1=document.createElement('div');
+  s1.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">默认班次</div>';
+  const r1=document.createElement('div');
+  r1.style.cssText='display:flex;gap:10px';
+  ['白','夜'].forEach(label=>{
     const b=document.createElement('button');
     b.textContent=label;
-    b.dataset.label=label;
-    b.style.cssText=`flex:1;padding:16px 0;border:0;border-radius:12px;font-weight:700;color:#fff;background:${colors[label]||'#8b919d'};font-size:18px`;
-    b.onclick=()=>{quickPaint(label);step2.style.display='block';};
-    row1.appendChild(b);
-  };
-  makeMain('白');
-  makeMain('夜');
-  step1.appendChild(row1);
-  bar.appendChild(step1);
-  // 第二步：标记特殊日期
-  const step2=document.createElement('div');
-  step2.id='quickStep2';
-  step2.style.display=data.quickDefault?'block':'none';
-  step2.innerHTML='<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--text)">第二步：点下面按钮再点日期，标记休班或其他</div>';
-  const row2=document.createElement('div');
-  row2.style.cssText='display:flex;gap:8px;width:100%;flex-wrap:wrap;align-items:center';
+    b.dataset.default=label;
+    b.style.cssText=`flex:1;padding:10px 0;border:0;border-radius:10px;font-weight:700;color:#fff;background:${colors[label]||'#8b919d'};font-size:14px;outline:3px solid transparent;outline-offset:2px`;
+    b.onclick=()=>quickPaint(label);
+    r1.appendChild(b);
+  });
+  s1.appendChild(r1);
+  bar.appendChild(s1);
+  // 标记日期
+  const s2=document.createElement('div');
+  s2.innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">标记日期</div>';
+  const r2=document.createElement('div');
+  r2.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center';
   const rest=document.createElement('button');
   rest.textContent='休';
-  rest.dataset.label='休';
-  rest.style.cssText='flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:#8b919d';
+  rest.dataset.paint='休';
+  rest.style.cssText='padding:12px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:#8b919d;outline:3px solid transparent;outline-offset:2px;font-size:15px';
   rest.onclick=()=>quickPaint('休');
-  row2.appendChild(rest);
+  r2.appendChild(rest);
   (data.quickLabels||[]).forEach(l=>{
     const c=colors[l]||'#5b67f1';
+    const wrap=document.createElement('div');
+    wrap.style.cssText='position:relative';
     const b=document.createElement('button');
     b.textContent=l;
-    b.dataset.label=l;
-    b.style.cssText=`flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:${c}`;
+    b.dataset.paint=l;
+    b.style.cssText=`padding:12px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:${c};outline:3px solid transparent;outline-offset:2px;font-size:15px`;
     b.onclick=()=>quickPaint(l);
-    row2.appendChild(b);
+    wrap.appendChild(b);
+    const del=document.createElement('span');
+    del.textContent='×';
+    del.style.cssText='position:absolute;top:-6px;right:-6px;width:20px;height:20px;background:#f05d5e;color:#fff;border-radius:50%;font-size:13px;line-height:20px;text-align:center;font-weight:700';
+    del.onclick=e=>{e.stopPropagation();data.quickLabels=data.quickLabels.filter(x=>x!==l);save();renderQuickBar();toast('已删除 '+l);};
+    wrap.appendChild(del);
+    r2.appendChild(wrap);
   });
   const add=document.createElement('button');
-  add.style.cssText='flex:0 0 auto;width:42px;height:42px;border:1px dashed var(--primary);background:#eef0ff;color:var(--primary);border-radius:10px;font-size:20px';
+  add.style.cssText='width:44px;height:44px;border:1px dashed var(--primary);background:#eef0ff;color:var(--primary);border-radius:10px;font-size:20px';
   add.textContent='+';
   add.onclick=quickAdd;
-  row2.appendChild(add);
+  r2.appendChild(add);
+  s2.appendChild(r2);
+  bar.appendChild(s2);
+  // 底部按钮
+  const br=document.createElement('div');
+  br.style.cssText='display:flex;gap:8px';
   const save=document.createElement('button');
   save.textContent='保存';
-  save.style.cssText='flex:0 0 auto;padding:10px 18px;border:0;border-radius:10px;font-weight:700;color:#fff;background:var(--green)';
+  save.style.cssText='flex:1;border:0;background:var(--green);color:#fff;border-radius:12px;padding:14px;font-weight:700;font-size:16px';
   save.onclick=quickSave;
-  row2.appendChild(save);
-  step2.appendChild(row2);
-  bar.appendChild(step2);
-  // 恢复选中态
-  if(data.quickDefault) quickPaint(data.quickDefault);
+  br.appendChild(save);
+  const clearBtn=document.createElement('button');
+  clearBtn.textContent='清除';
+  clearBtn.style.cssText='flex:1;border:1px solid var(--red);background:#fdecec;color:var(--red);border-radius:12px;padding:14px;font-weight:700;font-size:16px';
+  clearBtn.onclick=()=>{
+    data.shiftOverrides={};data.quickDefault=null;data.useQuickMode=true;
+    save();renderShiftCal();toast('已清除');
+  };
+  br.appendChild(clearBtn);
+  bar.appendChild(br);
+  if(data.quickDefault){
+    document.querySelectorAll('#quickBar button[data-default]').forEach(b=>{
+      b.style.outline=(b.dataset.default===data.quickDefault)?'3px solid var(--primary)':'3px solid transparent';
+    });
+  }
 }
 function clearShiftOverrides(){
   data.shiftOverrides={};
