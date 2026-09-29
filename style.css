@@ -23,12 +23,12 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 .timebar{height:4px;background:#eef0f5;border-radius:99px;overflow:hidden;margin-top:8px}
 .timebar i{display:block;height:100%;background:var(--primary);border-radius:99px;width:0%;transition:width .3s}
 .timetxt{font-size:10px;color:var(--muted);margin-top:5px}
-.daily-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;gap:4px}
-.daily-line .lab{font-size:10px;color:var(--muted)}
-.expect{font-size:16px;font-weight:800;color:var(--text);transition:color .3s}
+.daily-line{display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;gap:4px;white-space:nowrap;overflow:hidden}
+.daily-line .lab{font-size:10px;color:var(--muted);flex:0 0 auto;white-space:nowrap}
+.expect{font-size:16px;font-weight:800;color:var(--text);transition:color .3s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92px}
 .expect.red{color:var(--red)}
-.numwrap{position:relative;display:inline-block;min-width:66px;height:1.25em;overflow:hidden;vertical-align:bottom}
-.actual{font-size:14px;font-weight:700;color:var(--primary);display:inline-block}
+.numwrap{position:relative;display:inline-block;min-width:66px;height:1.25em;overflow:hidden;vertical-align:bottom;white-space:nowrap}
+.actual{font-size:14px;font-weight:700;color:var(--primary);display:inline-block;white-space:nowrap}
 .num-old{position:absolute;left:0;top:0;color:var(--primary);font-size:14px;font-weight:700;animation:numOld .45s ease forwards}
 @keyframes numOld{to{transform:translateY(42px);opacity:0}}
 .num-new{animation:numNew .45s ease}
@@ -126,3 +126,21 @@ header{padding:20px 18px 12px;display:flex;align-items:center;justify-content:sp
 .confetti.circle{border-radius:50%}
 .confetti.triangle{width:0!important;height:0!important;background:transparent!important;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:9px solid var(--c,#f05d5e);border-radius:0!important}
 .confetti.long{width:3px;height:18px}
+/* 周期可使用金额滑块弹窗 */
+.budget-preview{text-align:center;margin:4px 0 18px}
+.budget-cur{font-size:42px;font-weight:800;color:var(--primary);line-height:1.2;display:inline-block;min-width:4.6em;height:1.2em;overflow:hidden;vertical-align:bottom}
+.bch2{display:inline-block;min-width:1em;height:1.2em;line-height:1.2em;text-align:center;vertical-align:bottom;position:relative;overflow:hidden}
+.bch2.roll i{position:absolute;left:0;top:0;width:100%;height:1.2em;line-height:1.2em;font-style:normal;text-align:center}
+.bch2.roll .old{animation:rollOut .28s ease forwards}
+.bch2.roll .new{animation:rollIn .28s ease}
+@keyframes rollOut{to{transform:translateY(-100%);opacity:0}}
+@keyframes rollIn{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+.budget-hint{font-size:13px;color:var(--muted);margin-top:6px}
+#budgetSlider{width:100%;-webkit-appearance:none;appearance:none;height:10px;border-radius:99px;outline:none;margin:0;position:relative;z-index:0;background:radial-gradient(circle 6.5px at 33.3% 50%,rgba(255,255,255,.97) 0 4.6px,rgba(91,103,241,.85) 4.7px 6.2px,transparent 6.5px),radial-gradient(circle 6.5px at 66.7% 50%,rgba(255,255,255,.97) 0 4.6px,rgba(91,103,241,.85) 4.7px 6.2px,transparent 6.5px),linear-gradient(90deg,#5b67f1,#7b70ed)}
+#budgetSlider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:50%;background:#fff;border:4px solid var(--primary);box-shadow:0 3px 10px rgba(91,103,241,.4);cursor:pointer}
+#budgetSlider::-moz-range-thumb{width:30px;height:30px;border-radius:50%;background:#fff;border:4px solid var(--primary);box-shadow:0 3px 10px rgba(91,103,241,.4);cursor:pointer}
+.budget-scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px}
+/* 滑块吸附节点：视觉圆点画在轨道背景里，透明按钮只负责点击 */
+.slider-wrap{position:relative;padding:16px 0 16px}
+.slider-ticks{position:absolute;left:0;right:0;top:50%;height:0;pointer-events:none;transform:translateY(-50%)}
+.snap{position:absolute;transform:translateX(-50%);pointer-events:auto;width:28px;height:28px;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}

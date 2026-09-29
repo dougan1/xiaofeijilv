@@ -3,17 +3,63 @@ const BIN_ID='6ab77ec0ac6210605af7112f';
 const API_KEY='$2a$10$ozdu69gADpIovC9V66K7Rexv4XituqB0/j6RBkZiTLOFrOsm2TQOi';
 const API_URL='https://api.jsonbin.io/v3/b/'+BIN_ID;
 const API_HEADERS={'Content-Type':'application/json','X-Master-Key':API_KEY};
+const NEW_CATS=["购物","买菜","交通","停车费","吃饭"];
+const DEFAULT_ICONS={购物:'🛍️',买菜:'🥬',交通:'🚇',停车费:'🅿️',吃饭:'🍜'};
 let root={accounts:{},adminPassword:'admin123',users:{}};
-let data={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};
+let data={expenses:[],categories:["购物","买菜","交通","停车费","吃饭"],messages:[]};
 let currentUser=null;
 let selectedOffset=0;
 let dayCount=+localStorage.getItem(KEY+'_days')||31;
 let selectedDate=null;
 let calendarStart=null;
+let lastExpectDate='';
+function refreshDailyExpect(){
+  if(!(data.monthBudget>0)) return;
+  const c=getCycle(0);
+  const todayKey=fmtDate(new Date());
+  data.dailyExpect=data.dailyExpect||{};
+  // 累计到每天"前一天为止"的花费（每天凌晨0点算：剩余金额÷剩余天数）
+  const spentBefore={};
+  let acc=0;
+  for(let i=0;i<c.arr.length;i++){
+    const k=fmtDate(c.arr[i]);
+    spentBefore[k]=acc;
+    acc+=data.expenses.filter(x=>x.date===k).reduce((a,x)=>a+(+x.amount||0),0);
+  }
+  // 补算周期开始→今天，每一天的历史固定预计（没算过的才补，保证当天不变）
+  for(let i=0;i<c.arr.length;i++){
+    const k=fmtDate(c.arr[i]);
+    if(k>todayKey) break;
+    if(data.dailyExpect[k]!=null) continue;
+    const leftDays=c.arr.length-i;
+    if(leftDays<=0) continue;
+    data.dailyExpect[k]=Math.max(0,(+data.monthBudget-spentBefore[k])/leftDays);
+  }
+  lastExpectDate=todayKey;
+  save();
+}
+// 每添加/删除一笔消费后调用：只重算"明天及之后"每天的平均消费（当天预计保持不变）
+function recalcFutureExpect(){
+  if(!(data.monthBudget>0)) return;
+  const c=getCycle(0);
+  const todayKey=fmtDate(new Date());
+  const todayIdx=c.arr.findIndex(d=>fmtDate(d)===todayKey);
+  if(todayIdx<0) return;
+  const spentUntilToday=c.arr.filter(d=>fmtDate(d)<=todayKey).reduce((a,d)=>{
+    return a+data.expenses.filter(x=>x.date===fmtDate(d)).reduce((b,x)=>b+(+x.amount||0),0);
+  },0);
+  const leftDays=c.arr.length-(todayIdx+1); // 明天到周期结束，不含今天
+  if(leftDays<=0) return;
+  const val=Math.max(0,(+data.monthBudget-spentUntilToday)/leftDays);
+  data.dailyExpect=data.dailyExpect||{};
+  for(let i=todayIdx+1;i<c.arr.length;i++){
+    data.dailyExpect[fmtDate(c.arr[i])]=val;
+  }
+  save();
+}
 function pad(n){return String(n).padStart(2,'0')}
 function fmtDate(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
 function money(n){return '¥'+Number(n||0).toFixed(2)}
-const DEFAULT_ICONS={餐饮:'🍜',交通:'🚇',购物:'🛍️',娱乐:'🎮',生活:'🏠',其他:'💳'};
 function cycleStart(date=new Date()){
   const d=new Date(date); d.setHours(0,0,0,0);
   if(d.getDate()>=25) return new Date(d.getFullYear(),d.getMonth(),25);
@@ -84,24 +130,32 @@ async function loadCloud(){
 function loadUser(name){
   currentUser=name;
   let u=root.users[name];
-  if(!u){u={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};root.users[name]=u;}
+  if(!u){u={expenses:[],categories:NEW_CATS.slice(),messages:[]};root.users[name]=u;}
   // 本地数据保护：如果云端该用户没有消费记录，但本地 localStorage 有记录，合并进来避免丢失
   try{
     const local=JSON.parse(localStorage.getItem(KEY)||'null');
-    if(local && typeof local==='object' && (!Array.isArray(u.expenses)||!u.expenses.length) && Array.isArray(local.expenses)&&local.expenses.length){
-      u.expenses=local.expenses;
-      if(local.monthBudget!==undefined) u.monthBudget=local.monthBudget;
-      if(local.cycleStartDate) u.cycleStartDate=local.cycleStartDate;
-      if(local.cycleDays) u.cycleDays=local.cycleDays;
-      if(local.shiftPattern) u.shiftPattern=local.shiftPattern;
-      if(local.shiftColors) u.shiftColors=local.shiftColors;
-      if(Array.isArray(local.messages)&&local.messages.length) u.messages=local.messages;
-      save();
-      toast('已恢复本地记录');
+    if(local && typeof local==='object'){
+      // 云端消费为空但本地有记录 → 全量恢复
+      if((!Array.isArray(u.expenses)||!u.expenses.length) && Array.isArray(local.expenses)&&local.expenses.length){
+        u.expenses=local.expenses;
+        if(local.monthBudget!==undefined) u.monthBudget=local.monthBudget;
+        if(local.cycleStartDate) u.cycleStartDate=local.cycleStartDate;
+        if(local.cycleDays) u.cycleDays=local.cycleDays;
+        if(local.shiftPattern) u.shiftPattern=local.shiftPattern;
+        if(local.shiftColors) u.shiftColors=local.shiftColors;
+        if(Array.isArray(local.messages)&&local.messages.length) u.messages=local.messages;
+        save();
+        toast('已恢复本地记录');
+      }else if(u.monthBudget===undefined && local.monthBudget!==undefined){
+        // 云端缺预算字段但本地有 → 兜底恢复，避免金额显示 0
+        u.monthBudget=local.monthBudget;
+        save();
+      }
     }
   }catch(e){}
   data=u;
-  if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
+  // 分类：只有为空时才用新默认，已有分类一律不动（尊重用户已有数据）
+  if(!Array.isArray(data.categories)||!data.categories.length) data.categories=NEW_CATS.slice();
   if(!Array.isArray(data.messages)) data.messages=[];
   if(!Array.isArray(data.expenses)) data.expenses=[];
   localStorage.setItem(KEY,JSON.stringify(data));
@@ -128,24 +182,132 @@ function switchTab(t){
   }
 }
 function openHomeSettings(){
-  document.getElementById('monthBudget').value=data.monthBudget||'';
+  document.getElementById('fabAdd').style.display='none'; // 设置界面隐藏加号
   document.getElementById('cycleStartDate').value=data.cycleStartDate||'';
   document.getElementById('cycleDays').value=data.cycleDays||'';
   renderCats();
   document.getElementById('homeSettingsModal').classList.add('show');
 }
 function saveHomeSettings(){
-  data.monthBudget=parseFloat(document.getElementById('monthBudget').value)||0;
   const sd=document.getElementById('cycleStartDate').value;
   const cd=parseInt(document.getElementById('cycleDays').value)||0;
   if(sd && cd>0){data.cycleStartDate=sd;data.cycleDays=cd}
   else {delete data.cycleStartDate;delete data.cycleDays}
   selectedOffset=0;
+  data.dailyExpect={}; // 周期改了，重新算预计
+  refreshDailyExpect();recalcFutureExpect();
   save();closeHomeSettings();toast('设置已保存');
 }
 function closeHomeSettings(){
   document.getElementById('homeSettingsModal').classList.remove('show');
+  const activeTab=document.querySelector('.tabbar button.on')?.dataset?.tab||'home';
+  document.getElementById('fabAdd').style.display=(activeTab==='home')?'flex':'none';
   render();
+}
+/* 主页"周期可使用"整框点击，滑块设置金额 */
+function cycleSpent(offset){
+  const c=getCycle(offset||0);
+  const inCycleSet=new Set(c.arr.map(fmtDate));
+  return data.expenses.filter(x=>inCycleSet.has(x.date)).reduce((a,x)=>a+(+x.amount||0),0);
+}
+/* 把吸附圆点精确画在滑块轨道背景里（百分比定位，随上限变化） */
+function paintSliderBg(){
+  const s=document.getElementById('budgetSlider');
+  const maxV=+s.max||3000;
+  const p1=(1000/maxV*100), p2=(2000/maxV*100);
+  const dot=(p)=>'radial-gradient(circle 6.5px at '+p+'% 50%,rgba(255,255,255,.97) 0 4.6px,rgba(91,103,241,.85) 4.7px 6.2px,transparent 6.5px)';
+  s.style.background=dot(p1)+','+dot(p2)+',linear-gradient(90deg,#5b67f1,#7b70ed)';
+}
+function editBudget(){
+  document.getElementById('fabAdd').style.display='none'; // 金额设置时隐藏加号
+  const cur=(+data.monthBudget||0);
+  const maxV=Math.max(3000, Math.ceil((cur||500)*1.5/100)*100);
+  const s=document.getElementById('budgetSlider');
+  s.min=0;s.max=maxV;s.step=10;s.value=cur;
+  document.getElementById('budgetMaxLabel').textContent='¥'+maxV;
+  paintSliderBg();
+  budgetCur=cur; budgetTarget=cur; // 初始化追赶变量
+  updateBudgetPreview(cur);
+  document.getElementById('budgetModal').classList.add('show');
+}
+function intMoney(n){return '¥'+Math.round(n||0)}
+/* 缓动追赶：滑块拖动时数字平滑滞后地滚向滑块位置，不跟手但一直在动 */
+let budgetTarget=0, budgetCur=0, budgetRAF=false, lastBudgetUpd=0;
+function updateBudgetPreview(v){
+  const str=intMoney(v);
+  const box=document.getElementById('budgetShow');
+  const prev=box.dataset.prev||str;
+  const L=Math.max(prev.length,str.length);
+  const p=' '.repeat(L-prev.length)+prev;
+  const s=' '.repeat(L-str.length)+str;
+  let html='';
+  for(let i=0;i<L;i++){
+    const pc=p[i], nc=s[i];
+    if(pc===nc && nc!==' '){
+      html+='<span class="bch2">'+nc+'</span>';
+    }else if(pc!==nc){
+      // 变化的数字位：旧数字向上滑出，新数字从下方滑入
+      html+='<span class="bch2 roll"><i class="old">'+pc+'</i><i class="new">'+nc+'</i></span>';
+    }
+  }
+  box.innerHTML=html;
+  box.dataset.prev=str;
+  const spent=cycleSpent(selectedOffset);
+  document.getElementById('budgetRemainHint').textContent='剩余 '+intMoney(Math.max(0,v-spent));
+}
+const SNAP_POINTS=[1000,2000];
+function onBudgetSlider(){
+  let v=+document.getElementById('budgetSlider').value||0;
+  // 吸附：拖动到节点附近 ±30 自动吸附
+  for(const p of SNAP_POINTS){
+    if(Math.abs(v-p)<=30){
+      v=p;
+      document.getElementById('budgetSlider').value=v;
+      break;
+    }
+  }
+  budgetTarget=v;
+  if(!budgetRAF){
+    budgetRAF=true;
+    requestAnimationFrame(budgetTick);
+  }
+}
+/* 点击节点直接跳到对应金额 */
+function snapTo(p){
+  const s=document.getElementById('budgetSlider');
+  s.value=p;
+  budgetTarget=p; budgetCur=p;
+  updateBudgetPreview(p);
+}
+function budgetTick(now){
+  const diff=budgetTarget-budgetCur;
+  if(Math.abs(diff)<3){
+    budgetCur=budgetTarget;
+  }else{
+    budgetCur+=diff*0.18; // 缓动系数：数字慢半拍追赶滑块
+  }
+  if(now-lastBudgetUpd>150){
+    lastBudgetUpd=now;
+    updateBudgetPreview(Math.round(budgetCur));
+  }
+  if(Math.abs(diff)<3){
+    budgetRAF=false;
+    updateBudgetPreview(Math.round(budgetCur)); // 最终精确到位
+    return;
+  }
+  requestAnimationFrame(budgetTick);
+}
+function closeBudgetModal(){
+  document.getElementById('budgetModal').classList.remove('show');
+  const activeTab=document.querySelector('.tabbar button.on')?.dataset?.tab||'home';
+  document.getElementById('fabAdd').style.display=(activeTab==='home')?'flex':'none';
+}
+function saveBudgetModal(){
+  const v=+document.getElementById('budgetSlider').value||0;
+  data.monthBudget=v;
+  data.dailyExpect={};
+  refreshDailyExpect();recalcFutureExpect();
+  save();closeBudgetModal();toast('周期金额已更新');render();
 }
 function toggleGroup(el){el.parentElement.classList.toggle('open')}
 function shiftCycle(d){selectedOffset+=d;calendarStart=null;render()}
@@ -155,10 +317,6 @@ function shiftCal(dir){
   if(!calendarStart) calendarStart=new Date(getCycle(selectedOffset).s);
   calendarStart.setDate(calendarStart.getDate()+dir*dayCount);
   render();
-}
-function saveSettings(){
-  const v=parseFloat(document.getElementById('monthBudget').value)||0;
-  data.monthBudget=v;save();closeHomeSettings();toast('预算已保存');
 }
 function barColor(pct){return pct>=50?'#22b573':(pct>=30?'#f7b500':'#f05d5e')}
 function tick(){
@@ -177,17 +335,12 @@ function render(){
   const baseDaily=cycleDays?monthBudget/cycleDays:0;
   const inCycleSet=new Set(c.arr.map(fmtDate));
   const spent=data.expenses.filter(x=>inCycleSet.has(x.date)).reduce((a,x)=>a+(+x.amount||0),0);
-  // 动态每日预算：到今天为止已花金额固定，剩余预算÷从选中日到周期结束的天数
-  const todayKey=fmtDate(new Date());
-  const spentUntilToday=c.arr.filter(d=>fmtDate(d)<=todayKey).reduce((a,d)=>{
-    return a+data.expenses.filter(x=>x.date===fmtDate(d)).reduce((b,x)=>b+(+x.amount||0),0);
-  },0);
+  // 预计消费：过去每天是固定历史值；今天凌晨0点算好；未来日期显示当前预计（不会越点越大）
   const expectedAt=(key)=>{
-    const idx=c.arr.findIndex(d=>fmtDate(d)===key);
-    if(idx<0) return baseDaily;
-    const leftDays=cycleDays-idx;
-    const leftBudget=Math.max(0,monthBudget-spentUntilToday);
-    return leftDays>0?leftBudget/leftDays:0;
+    const v=data.dailyExpect&&data.dailyExpect[key];
+    if(typeof v==='number') return v; // 存在就用（包括0）
+    const todayV=data.dailyExpect&&data.dailyExpect[fmtDate(new Date())];
+    return (typeof todayV==='number')?todayV:0;
   };
   const remain=monthBudget-spent, pct=monthBudget?Math.max(0,Math.min(100,remain/monthBudget*100)):0;
   document.getElementById('budget').textContent=money(monthBudget);
@@ -203,12 +356,13 @@ function render(){
   else passedRatio=(today-c.s)/86400000/cycleDays;
   document.getElementById('timeBar').style.width=(passedRatio*100)+'%';
   document.getElementById('timeTxt').textContent=`第 ${Math.max(1,Math.round(passedRatio*cycleDays))}/${cycleDays} 天`;
-  const focusKey=selectedDate||todayKey;
+  const focusKey=selectedDate||fmtDate(new Date());
   const focusSpent=data.expenses.filter(x=>x.date===focusKey).reduce((a,x)=>a+(+x.amount||0),0);
   document.getElementById('actualLab').textContent=selectedDate?focusKey.slice(5):'当日';
   const focusExpected=expectedAt(focusKey);
   const expectEl=document.getElementById('expectNum');
-  expectEl.textContent=money(focusExpected);
+  const hasVal=typeof(data.dailyExpect&&data.dailyExpect[focusKey])==='number';
+  expectEl.textContent=hasVal?money(focusExpected):'--';
   expectEl.classList.toggle('red', focusExpected>0 && focusSpent>focusExpected);
   setActualImmediate(money(focusSpent));
   document.querySelectorAll('#daypick button').forEach(b=>b.classList.toggle('on',+b.dataset.n===dayCount));
@@ -906,7 +1060,7 @@ function delExpense(id,ev){
   if(card) card.classList.add('deleting');
   setTimeout(()=>{
     data.expenses=data.expenses.filter(x=>x.id!==id);
-    save();render();toast('已删除');
+    recalcFutureExpect();save();render();toast('已删除');
   },260);
 }
 function clearCycle(){
@@ -1017,7 +1171,8 @@ function saveExpense(){
   const date=document.getElementById('date').value;
   if(!(amount>0)||!date){alert('请填写金额和日期');return}
   const oldActual=document.getElementById('actualNum').textContent;
-  data.expenses.push({id:Date.now(),item:item||'',amount,category:document.getElementById('category').value,date});save();closeModal();
+  data.expenses.push({id:Date.now(),item:item||'',amount,category:document.getElementById('category').value,date});
+  recalcFutureExpect();save();closeModal();
   document.getElementById('item').value='';document.getElementById('amount').value='';
   render();
   const todayKey=fmtDate(new Date());
@@ -1052,8 +1207,18 @@ async function postMessage(){
   await loadCloud();
   // 单人使用：直接以 admin 身份加载数据
   loadUser('admin');
+  refreshDailyExpect();
   render();
 })();
+// 跨天检测：每天凌晨0点自动按当天剩余金额÷剩余天数重新计算预计消费
+setInterval(()=>{
+  const t=fmtDate(new Date());
+  if(t!==lastExpectDate){
+    lastExpectDate=t;
+    refreshDailyExpect();
+    render();
+  }
+},60000);
 setTimeout(loadSnakeSettings, 500);
 function saveSnakeSettings(){
   localStorage.setItem('h5_snake_len',document.getElementById('snakeLen').value);

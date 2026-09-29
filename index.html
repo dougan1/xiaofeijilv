@@ -25,7 +25,7 @@
       <div class="clock" id="clock">00:00:00</div>
     </div>
     <div class="stats">
-      <div class="stat">
+      <div class="stat" onclick="editBudget()" style="cursor:pointer">
         <span>周期可使用</span>
         <b id="budget">¥0</b>
         <div class="timebar"><i id="timeBar"></i></div>
@@ -252,7 +252,6 @@
 <div class="modal" id="homeSettingsModal">
  <div class="sheet">
   <h3>主页设置</h3>
-  <div class="field"><label>周期可使用金额（元）</label><input id="monthBudget" type="number" min="0" step="0.01" placeholder="例如 930"></div>
   <div class="field"><label>周期开始日期</label><input id="cycleStartDate" type="date"></div>
   <div class="field"><label>周期天数（自动算结束日期）</label><input id="cycleDays" type="number" min="1" max="60" placeholder="例如 31"></div>
   <div class="notice" style="margin-bottom:10px">不设置则默认每月25号至次月25号。开始日期+天数=一个周期，下个周期自动顺延。</div>
@@ -264,6 +263,24 @@
     <button onclick="addCat()">添加</button>
   </div>
   <div class="actions"><button class="save" style="flex:1" onclick="closeHomeSettings()">完成</button></div>
+ </div>
+</div>
+<div class="modal" id="budgetModal">
+ <div class="sheet">
+  <h3>周期可使用金额</h3>
+  <div class="budget-preview">
+    <div class="budget-cur" id="budgetShow">¥0</div>
+    <div class="budget-hint" id="budgetRemainHint">剩余 ¥0</div>
+  </div>
+  <div class="slider-wrap">
+    <input type="range" id="budgetSlider" min="0" max="3000" step="10" value="0" oninput="onBudgetSlider()" onchange="onBudgetSlider()" onpointerup="onBudgetSlider()">
+    <div class="slider-ticks">
+      <button class="snap" id="snap1" style="left:33.3%" onclick="snapTo(1000)" aria-label="1000元"></button>
+      <button class="snap" id="snap2" style="left:66.7%" onclick="snapTo(2000)" aria-label="2000元"></button>
+    </div>
+  </div>
+  <div class="budget-scale"><span>¥0</span><span id="budgetMaxLabel">¥3000</span></div>
+  <div class="actions"><button class="cancel" onclick="closeBudgetModal()">取消</button><button class="save" onclick="saveBudgetModal()">保存</button></div>
  </div>
 </div>
 <div class="toast" id="toast"></div>
