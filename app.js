@@ -43,11 +43,24 @@ function save(){
   localStorage.setItem(KEY+'_user',currentUser||'');
   localStorage.setItem(KEY,JSON.stringify(data));
   localStorage.setItem(KEY+'_days',dayCount);
-  fetch(API_URL,{method:'PUT',headers:API_HEADERS,body:JSON.stringify(root)}).catch(()=>{});
+  localStorage.setItem('h5_root',JSON.stringify(root));
+  try{
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(),6000);
+    fetch(API_URL,{method:'PUT',headers:API_HEADERS,body:JSON.stringify(root),signal:ctl.signal}).finally(()=>clearTimeout(timer)).catch(()=>{});
+  }catch(e){}
 }
 async function loadCloud(){
+  // 先用本地缓存的 root 兜底（防止云端超时/失败导致账号密码"消失"）
   try{
-    const r=await fetch(API_URL,{headers:{'X-Master-Key':API_KEY}});
+    const cached=localStorage.getItem('h5_root');
+    if(cached) root=JSON.parse(cached);
+  }catch(e){}
+  try{
+    const ctl=new AbortController();
+    const timer=setTimeout(()=>ctl.abort(),8000);
+    const r=await fetch(API_URL,{headers:{'X-Master-Key':API_KEY},signal:ctl.signal});
+    clearTimeout(timer);
     if(!r.ok) return false;
     const j=await r.json();
     const remote=j.record||j;
@@ -62,14 +75,32 @@ async function loadCloud(){
     if(!root.accounts) root.accounts={};
     if(!root.users) root.users={};
     if(!root.adminPassword) root.adminPassword='admin123';
+    // 云端加载成功 → 更新本地缓存
+    localStorage.setItem('h5_root',JSON.stringify(root));
     return true;
   }catch(e){}
   return false;
 }
 function loadUser(name){
   currentUser=name;
-  data=root.users[name];
-  if(!data){data={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};root.users[name]=data;}
+  let u=root.users[name];
+  if(!u){u={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};root.users[name]=u;}
+  // 本地数据保护：如果云端该用户没有消费记录，但本地 localStorage 有记录，合并进来避免丢失
+  try{
+    const local=JSON.parse(localStorage.getItem(KEY)||'null');
+    if(local && typeof local==='object' && (!Array.isArray(u.expenses)||!u.expenses.length) && Array.isArray(local.expenses)&&local.expenses.length){
+      u.expenses=local.expenses;
+      if(local.monthBudget!==undefined) u.monthBudget=local.monthBudget;
+      if(local.cycleStartDate) u.cycleStartDate=local.cycleStartDate;
+      if(local.cycleDays) u.cycleDays=local.cycleDays;
+      if(local.shiftPattern) u.shiftPattern=local.shiftPattern;
+      if(local.shiftColors) u.shiftColors=local.shiftColors;
+      if(Array.isArray(local.messages)&&local.messages.length) u.messages=local.messages;
+      save();
+      toast('已恢复本地记录');
+    }
+  }catch(e){}
+  data=u;
   if(!Array.isArray(data.categories)||!data.categories.length) data.categories=["餐饮","交通","购物","娱乐","生活","其他"];
   if(!Array.isArray(data.messages)) data.messages=[];
   if(!Array.isArray(data.expenses)) data.expenses=[];
@@ -146,19 +177,16 @@ function render(){
   const baseDaily=cycleDays?monthBudget/cycleDays:0;
   const inCycleSet=new Set(c.arr.map(fmtDate));
   const spent=data.expenses.filter(x=>inCycleSet.has(x.date)).reduce((a,x)=>a+(+x.amount||0),0);
-  // 动态每日预算：到某天为止剩余预算 ÷ 从那天起到周期结束的天数
-  const spentBefore={};
-  let acc=0;
-  c.arr.forEach(d=>{
-    const k=fmtDate(d);
-    spentBefore[k]=acc;
-    acc+=data.expenses.filter(x=>x.date===k).reduce((a,x)=>a+(+x.amount||0),0);
-  });
+  // 动态每日预算：到今天为止已花金额固定，剩余预算÷从选中日到周期结束的天数
+  const todayKey=fmtDate(new Date());
+  const spentUntilToday=c.arr.filter(d=>fmtDate(d)<=todayKey).reduce((a,d)=>{
+    return a+data.expenses.filter(x=>x.date===fmtDate(d)).reduce((b,x)=>b+(+x.amount||0),0);
+  },0);
   const expectedAt=(key)=>{
     const idx=c.arr.findIndex(d=>fmtDate(d)===key);
     if(idx<0) return baseDaily;
     const leftDays=cycleDays-idx;
-    const leftBudget=monthBudget-spentBefore[key];
+    const leftBudget=Math.max(0,monthBudget-spentUntilToday);
     return leftDays>0?leftBudget/leftDays:0;
   };
   const remain=monthBudget-spent, pct=monthBudget?Math.max(0,Math.min(100,remain/monthBudget*100)):0;
@@ -175,7 +203,6 @@ function render(){
   else passedRatio=(today-c.s)/86400000/cycleDays;
   document.getElementById('timeBar').style.width=(passedRatio*100)+'%';
   document.getElementById('timeTxt').textContent=`第 ${Math.max(1,Math.round(passedRatio*cycleDays))}/${cycleDays} 天`;
-  const todayKey=fmtDate(new Date());
   const focusKey=selectedDate||todayKey;
   const focusSpent=data.expenses.filter(x=>x.date===focusKey).reduce((a,x)=>a+(+x.amount||0),0);
   document.getElementById('actualLab').textContent=selectedDate?focusKey.slice(5):'当日';
@@ -277,8 +304,25 @@ function shiftStartMin(){
   return h*60+m;
 }
 function updateTodayShift(){
-  const key=fmtDate(new Date());
-  const shift=getShiftOf(key);
+  const now=new Date();
+  const key=fmtDate(now);
+  let shift=getShiftOf(key);
+  // 跨天夜班：如果今天凌晨还在昨天夜班上，优先显示昨天的夜班
+  const yKey=fmtDate(new Date(now-86400000));
+  const yShift=getShiftOf(yKey);
+  const startMin=shiftStartMin();
+  const durMin=shiftHours()*60;
+  const nowMin=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
+  // 昨天夜班的结束时间（昨天开始+12h+时长）
+  const yNightStart=(startMin+12*60)%1440;
+  const yNightEnd=yNightStart+durMin; // 可能>1440
+  if(yShift==='夜' && nowMin < (yNightEnd-1440)){
+    shift='夜';
+    // 夜班从今天凌晨0点开始算进度
+    const sMin=0, eMin=yNightEnd-1440;
+    renderShiftBar(shift, sMin, eMin, nowMin, now);
+    return;
+  }
   const nameEl=document.getElementById('todayShiftName');
   const colors=shiftColors();
   const col=colors[shift]||'#8b919d';
@@ -300,44 +344,47 @@ function updateTodayShift(){
     return;
   }
   card.style.background='var(--card)';
-  let startMin=shiftStartMin();
+  let sMin=startMin;
   if(shift==='夜'){
-    startMin=(startMin+12*60)%1440;
+    sMin=(sMin+12*60)%1440;
   }
-  const durMin=shiftHours()*60;
-  const now=new Date();
-  const nowMin=now.getHours()*60+now.getMinutes()+now.getSeconds()/60;
-  let sMin=startMin, eMin=startMin+durMin;
-  // 跨天处理：如果结束分钟超过 1440，按今天的开始~今天结束 或 今天凌晨~今天结束
-  // 简化：从今天的 startMin 开始，durMin 分钟后结束；若 >1440 则跨到明天
-  let pct=0, status='', barColor='#8b919d', countdown='';
+  const eMin=sMin+durMin;
+  renderShiftBar(shift, sMin, eMin, nowMin, now, {startEl,endEl,statusEl,pctEl,bar,card});
+}
+function renderShiftBar(shift, sMin, eMin, nowMin, now, els){
+  if(!els){
+    els={
+      bar:document.getElementById('todayShiftBar'),
+      pctEl:document.getElementById('todayShiftPct'),
+      statusEl:document.getElementById('todayShiftStatus'),
+      startEl:document.getElementById('todayShiftStart'),
+      endEl:document.getElementById('todayShiftEnd'),
+      card:document.getElementById('todayShiftCard')
+    };
+  }
+  const {bar,pctEl,statusEl,startEl,endEl,card}=els;
   const fmtCDiff=diffSec=>{
     const h=Math.floor(diffSec/3600), m=Math.floor(diffSec%3600/60), s=diffSec%60;
     return h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
   };
+  let pct=0, status='', barColor='#8b919d', countdown='';
   if(nowMin<sMin){
     pct=nowMin/sMin*100;
-    status='已下班';
-    barColor='#22b573';
+    status='已下班'; barColor='#22b573';
     countdown='距上班 '+fmtCDiff(Math.floor((sMin-nowMin)*60));
   } else if(nowMin>=eMin && eMin<=1440){
-    const remain=1440-eMin;
-    const totalNext=remain+sMin;
+    const remain=1440-eMin, totalNext=remain+sMin;
     pct=(nowMin-eMin)/totalNext*100;
-    status='已下班';
-    barColor='#22b573';
+    status='已下班'; barColor='#22b573';
     countdown='距上班 '+fmtCDiff(Math.floor((sMin+1440-nowMin)*60));
   } else if(eMin>1440 && nowMin < eMin-1440){
-    sMin=0; eMin=eMin-1440;
-    pct=nowMin/eMin*100;
-    status='上班中';
-    barColor='#f05d5e';
-    countdown='距下班 '+fmtCDiff(Math.floor((eMin-nowMin)*60));
+    pct=nowMin/(eMin-1440)*100;
+    status='上班中'; barColor='#f05d5e';
+    countdown='距下班 '+fmtCDiff(Math.floor((eMin-1440-nowMin)*60));
   } else {
     const total=eMin>1440?1440-sMin:eMin-sMin;
     pct=(nowMin-sMin)/total*100;
-    status='上班中';
-    barColor='#f05d5e';
+    status='上班中'; barColor='#f05d5e';
     countdown='距下班 '+fmtCDiff(Math.floor((eMin-nowMin)*60));
   }
   bar.style.width=Math.max(0,Math.min(100,pct))+'%';
@@ -347,7 +394,6 @@ function updateTodayShift(){
     fireConfetti();
   }
   statusEl.textContent=status;
-  // 下班绿，上班红
   statusEl.style.background=barColor;
   statusEl.style.color='#fff';
   updateTodayShift._last=status;
@@ -1002,135 +1048,13 @@ async function postMessage(){
   document.getElementById('msgText').value='';
   loadMessages();toast('留言已发送');
 }
-window.doLogin=doLogin;
-window.doAdminLogin2=doAdminLogin2;
-window.checkAdminFromSettings=checkAdminFromSettings;
-window.doLogout=doLogout;
-window.addAccount=addAccount;
-window.delAccount=delAccount;
-window.changeAdminPass=changeAdminPass;
 (async function init(){
   await loadCloud();
-  // 自动登录
-  const savedUser=localStorage.getItem(KEY+'_user');
-  const savedTime=+localStorage.getItem(KEY+'_loginTime')||0;
-  const sevenDays=7*24*60*60*1000;
-  if(savedUser && root.accounts[savedUser] && (Date.now()-savedTime)<sevenDays){
-    loadUser(savedUser);
-    document.getElementById('loginModal').classList.remove('show');
-    render();
-  } else if(Object.keys(root.accounts).length===0){
-    loadUser('admin');
-    root.accounts['admin']=root.adminPassword;
-    localStorage.setItem(KEY+'_loginTime',Date.now());
-    document.getElementById('loginModal').classList.remove('show');
-    render();
-  }
+  // 单人使用：直接以 admin 身份加载数据
+  loadUser('admin');
+  render();
 })();
 setTimeout(loadSnakeSettings, 500);
-function checkAdminFromSettings(){
-  const p=document.getElementById('setAdminPass').value;
-  if(p===root.adminPassword){
-    document.getElementById('adminSettingsArea').style.display='block';
-    renderAccountList();
-    toast('管理员已验证');
-  } else alert('管理员密码错误');
-}
-function doLogout(){
-  localStorage.removeItem(KEY+'_user');
-  location.reload();
-}
-function logout(){doLogout()}
-function doLogin(){
-  var u=document.getElementById('loginUser').value.trim();
-  var p=document.getElementById('loginPass').value;
-  if(!u||!p){alert('请输入账号和密码');return}
-  if(root.accounts[u]===p){
-    loadUser(u);
-    localStorage.setItem(KEY+'_loginTime',Date.now());
-    document.getElementById('loginModal').classList.remove('show');
-    render();toast('欢迎 '+u);
-  } else {
-    alert('账号或密码错误');
-  }
-}
-function doAdminLogin2(){
-  var p=document.getElementById('adminPass2').value;
-  if(p===root.adminPassword){
-    document.getElementById('loginModal').classList.remove('show');
-    loadUser('admin');
-    localStorage.setItem(KEY+'_loginTime',Date.now());
-    render();
-    toast('欢迎管理员');
-  } else alert('管理员密码错误');
-}
-function openAdminLogin(fromSettings){
-  const p=prompt('请输入管理员密码：');
-  if(p===null) return;
-  if(p===root.adminPassword){
-    if(fromSettings){
-      openAdminPanel();
-    } else {
-      document.getElementById('loginModal').classList.remove('show');
-      loadUser('admin');
-      render();
-      toast('欢迎管理员');
-    }
-  } else alert('管理员密码错误');
-}
-function closeAdminLogin(){document.getElementById('adminLoginModal').classList.remove('show')}
-function doAdminLogin(){
-  const p=document.getElementById('adminPass').value;
-  if(p===root.adminPassword){
-    closeAdminLogin();
-    if(adminLogin._fromSettings){
-      openAdminPanel();
-    } else {
-      document.getElementById('loginModal').classList.remove('show');
-      loadUser('admin');
-      render();
-      toast('欢迎管理员');
-    }
-  } else alert('管理员密码错误');
-}
-function openAdminPanel(){
-  document.getElementById('adminWho').textContent=currentUser||'未登录';
-  renderAccountList();
-  document.getElementById('adminPanelModal').classList.add('show');
-}
-function closeAdminPanel(){document.getElementById('adminPanelModal').classList.remove('show')}
-function renderAccountList(){
-  const box=document.getElementById('accountList');
-  box.innerHTML=Object.keys(root.accounts).map(u=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
-      <div><div style="font-size:14px;font-weight:600">${u}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${u==='admin'?'管理员（不可删）':'普通账号 · 密码: '+root.accounts[u]}</div></div>
-      ${u!=='admin'?`<button onclick="delAccount('${u}')" style="border:0;background:#fdecec;color:var(--red);padding:8px 12px;border-radius:10px;font-weight:700;font-size:12px">删除</button>`:''}
-    </div>`).join('')||'<div class="empty">暂无账号</div>';
-}
-function addAccount(){
-  const u=document.getElementById('newAccount').value.trim();
-  const p=document.getElementById('newAccountPass').value;
-  if(!u||!p){alert('请输入账号和密码');return}
-  if(root.accounts[u]){alert('账号已存在');return}
-  root.accounts[u]=p;
-  root.users[u]={expenses:[],categories:["餐饮","交通","购物","娱乐","生活","其他"],messages:[]};
-  save();renderAccountList();
-  document.getElementById('newAccount').value='';document.getElementById('newAccountPass').value='';
-  toast('已添加账号 '+u);
-}
-function delAccount(u){
-  delete root.accounts[u];delete root.users[u];
-  save();renderAccountList();toast('已删除 '+u);
-}
-function changeAdminPass(){
-  const p=document.getElementById('newAdminPass').value;
-  if(!p||p.length<4){alert('新密码至少 4 位');return}
-  root.adminPassword=p;
-  root.accounts['admin']=p;
-  save();
-  document.getElementById('newAdminPass').value='';
-  toast('管理员密码已修改');
-}
 function saveSnakeSettings(){
   localStorage.setItem('h5_snake_len',document.getElementById('snakeLen').value);
   localStorage.setItem('h5_snake_size',document.getElementById('snakeSize').value);

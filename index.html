@@ -224,33 +224,6 @@
           </div>
         </div>
       </div>
-      <div class="set-group">
-        <div class="set-head" onclick="toggleGroup(this)"><b>管理员功能</b><span class="arrow">›</span></div>
-        <div class="set-body">
-          <div style="display:flex;gap:8px;margin-bottom:10px">
-            <input id="setAdminPass" type="password" placeholder="输入管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-            <button onclick="checkAdminFromSettings()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 16px;font-weight:700">验证</button>
-          </div>
-          <div id="adminSettingsArea" style="display:none">
-            <div style="font-size:13px;font-weight:700;margin:10px 0 6px">添加账号</div>
-            <div style="display:flex;gap:8px">
-              <input id="newAccount" placeholder="账号名" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-              <input id="newAccountPass" placeholder="密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-              <button onclick="addAccount()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">添加</button>
-            </div>
-            <div style="font-size:13px;font-weight:700;margin:14px 0 6px">账号列表</div>
-            <div id="accountList" style="max-height:200px;overflow-y:auto"></div>
-            <div style="font-size:13px;font-weight:700;margin:14px 0 6px">修改管理员密码</div>
-            <div style="display:flex;gap:8px">
-              <input id="newAdminPass" type="password" placeholder="新管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-              <button onclick="changeAdminPass()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">保存</button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="set-group">
-        <div class="set-head" onclick="doLogout()"><b>退出登录</b><span class="arrow">›</span></div>
-      </div>
     </div>
     <input type="file" id="importFile" class="hidden-input" accept="application/json" onchange="importData(event)">
   </div>
@@ -291,48 +264,6 @@
     <button onclick="addCat()">添加</button>
   </div>
   <div class="actions"><button class="save" style="flex:1" onclick="closeHomeSettings()">完成</button></div>
- </div>
-</div>
-<div class="modal show" id="loginModal" style="z-index:50">
- <div class="sheet">
-  <h3>登录</h3>
-  <div class="field"><label>账号</label><input id="loginUser" placeholder="输入账号"></div>
-  <div class="field"><label>密码</label><input id="loginPass" type="password" placeholder="输入密码"></div>
-  <div class="actions"><button class="save" style="flex:1" onclick="doLogin()">登录</button></div>
-  <div style="text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
-    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">—— 管理员登录 ——</div>
-    <div style="display:flex;gap:8px">
-      <input id="adminPass2" type="password" placeholder="管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-      <button onclick="doAdminLogin2()" style="border:0;background:#333;color:#fff;border-radius:10px;padding:0 16px;font-weight:700">进入</button>
-    </div>
-  </div>
- </div>
-</div>
-<div class="modal" id="adminLoginModal" style="z-index:60">
- <div class="sheet">
-  <h3>管理员验证</h3>
-  <div class="field"><label>管理员密码</label><input id="adminPass" type="password" placeholder="输入管理员密码" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
-  <div class="actions"><button class="cancel" onclick="closeAdminLogin()">取消</button><button class="save" onclick="doAdminLogin()">验证</button></div>
- </div>
-</div>
-<div class="modal" id="adminPanelModal" style="z-index:60">
- <div class="sheet">
-  <h3>管理员面板</h3>
-  <div class="notice" style="margin-bottom:10px">当前登录：<b id="adminWho"></b></div>
-  <div style="font-size:13px;font-weight:700;margin:10px 0 6px">添加账号</div>
-  <div style="display:flex;gap:8px">
-    <input id="newAccount" placeholder="账号名" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-    <input id="newAccountPass" placeholder="密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-    <button onclick="addAccount()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">添加</button>
-  </div>
-  <div style="font-size:13px;font-weight:700;margin:14px 0 6px">账号列表</div>
-  <div id="accountList" style="max-height:200px;overflow-y:auto"></div>
-  <div style="font-size:13px;font-weight:700;margin:14px 0 6px">修改管理员密码</div>
-  <div style="display:flex;gap:8px">
-    <input id="newAdminPass" type="password" placeholder="新管理员密码" style="flex:1;border:1px solid var(--line);background:#f8f9fc;border-radius:10px;padding:10px;outline:none">
-    <button onclick="changeAdminPass()" style="border:0;background:var(--primary);color:#fff;border-radius:10px;padding:0 14px;font-weight:700">保存</button>
-  </div>
-  <div class="actions"><button class="save" style="flex:1" onclick="closeAdminPanel()">完成</button></div>
  </div>
 </div>
 <div class="toast" id="toast"></div>
