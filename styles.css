@@ -7713,3 +7713,435 @@ nav button.on,
 		display: none !important
 	}
 }
+
+/* ===== V69 优化：薄荷绿 + 暖杏配色 & 日历布局疏朗化 ===== */
+:root {
+	--ui-bg: #edf5f1;
+	--ui-surface: #ffffff;
+	--ui-ink: #1d2e2a;
+	--ui-muted: #6b7f7a;
+	--ui-primary: #2a9d8f;
+	--ui-primary-2: #48b8a3;
+	--ui-accent: #e8a55c;
+	--ui-danger: #d4735a;
+	--ui-line: #d4e6df;
+	--ui-shadow: rgba(29, 46, 42, .07)
+}
+
+html,
+body {
+	background: var(--ui-bg);
+	color: var(--ui-ink)
+}
+
+#app {
+	background: #f4f8f6
+}
+
+/* Hero 卡片：深薄荷绿渐变 */
+.hero-card {
+	background: linear-gradient(145deg, #173530, #2a554c);
+	box-shadow: 0 14px 35px rgba(23, 53, 48, .18)
+}
+
+.budget-bar i {
+	background: #52c9a8
+}
+
+/* 排班 Hero */
+.shift-hero {
+	background: linear-gradient(145deg, #1a3840, #2c5654);
+	box-shadow: 0 14px 35px rgba(26, 56, 64, .18)
+}
+
+.shift-hero .progress i {
+	background: #5cc9a8
+}
+
+/* FAB 按钮阴影跟随主色 */
+.fab {
+	box-shadow: 0 14px 30px rgba(42, 157, 143, .28)
+}
+
+.fab:active {
+	box-shadow: 0 8px 22px rgba(42, 157, 143, .22)
+}
+
+/* 导航 */
+nav {
+	background: rgba(255, 255, 255, .96);
+	border-top-color: rgba(212, 230, 223, .95)
+}
+
+nav button {
+	color: #8fa39e
+}
+
+/* ===== 日历布局疏朗化 ===== */
+.calendar-card .calendar {
+	gap: 9px 7px
+}
+
+.day.expense-day {
+	min-height: 82px;
+	padding: 9px 5px 8px;
+	border-radius: 15px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: space-between
+}
+
+.day.expense-day .day-top {
+	height: auto;
+	line-height: 1
+}
+
+.day.expense-day .day-top b {
+	font-size: 12.5px;
+	line-height: 1;
+	letter-spacing: 0
+}
+
+.day.expense-day .day-face {
+	font-size: 17px;
+	line-height: 20px;
+	margin: 3px 0 2px
+}
+
+.day.expense-day .day-actual {
+	max-width: 100%;
+	margin: 0;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1.1;
+	overflow: visible;
+	text-overflow: clip;
+	white-space: nowrap
+}
+
+.calendar-card .blank {
+	min-height: 82px
+}
+
+/* ===== 日历格子配色：薄荷绿体系 ===== */
+.day.expense-day {
+	background: #eaf4ef;
+	color: #4e635e
+}
+
+.day.expense-day.no-spend {
+	background: #f2f0ea;
+	color: #8a8a82
+}
+
+.day.expense-day.spent,
+.day.expense-day.past-zero {
+	background: #dcf0e6
+}
+
+.day.expense-day.spent .day-top b,
+.day.expense-day.spent .day-actual,
+.day.expense-day.past-zero .day-top b,
+.day.expense-day.past-zero .day-actual {
+	color: #2a7d68
+}
+
+.day.expense-day.over {
+	background: #f9e9e2
+}
+
+.day.expense-day.over .day-top b,
+.day.expense-day.over .day-actual {
+	color: #c45a3e !important
+}
+
+/* 今日高亮 */
+.calendar-card .day.expense-day.today,
+.day.expense-day.today {
+	outline-color: var(--ui-primary);
+	box-shadow: 0 4px 14px rgba(42, 157, 143, .18)
+}
+
+/* 选中态 */
+.day.expense-day.selected {
+	outline: 2px solid #1d4f47;
+	outline-offset: -2px
+}
+
+/* 记录图标 & 设置图标背景 */
+.record-icon,
+.setting-icon {
+	background: #e6f2ed
+}
+
+/* 垃圾桶按钮 */
+.trash {
+	background: #fbeae4;
+	color: var(--ui-danger)
+}
+
+/* 小屏幕适配 */
+@media(max-width:360px) {
+	.calendar-card .calendar {
+		gap: 7px 5px
+	}
+
+	.day.expense-day {
+		min-height: 76px;
+		padding: 8px 4px 7px
+	}
+
+	.calendar-card .blank {
+		min-height: 76px
+	}
+
+	.day.expense-day .day-face {
+		font-size: 15px;
+		line-height: 17px
+	}
+
+	.day.expense-day .day-actual {
+		font-size: 10px
+	}
+}
+
+
+/* ===== V70 优化：清新纯色，去渐变，浅色化 ===== */
+:root {
+	--ui-bg: #eef7f4;
+	--ui-surface: #ffffff;
+	--ui-ink: #2d4a42;
+	--ui-muted: #7a968e;
+	--ui-primary: #4fb8a0;
+	--ui-primary-2: #7dd4c0;
+	--ui-accent: #eeb06a;
+	--ui-danger: #e07a6a;
+	--ui-line: #d8ece4;
+	--ui-shadow: rgba(45, 74, 66, .06)
+}
+
+html,
+body {
+	background: var(--ui-bg);
+	color: var(--ui-ink)
+}
+
+#app {
+	background: #f2f8f5
+}
+
+/* ===== 消费 Hero：浅色纯色，去渐变 ===== */
+.hero-card {
+	background: #e4f3ed;
+	color: #2d4a42;
+	box-shadow: 0 8px 24px rgba(45, 74, 66, .08)
+}
+
+.hero-card small {
+	color: #6b8a82
+}
+
+.hero-card strong {
+	color: #2d4a42
+}
+
+.hero-foot,
+.hero-foot span {
+	color: #7a968e
+}
+
+.budget-bar {
+	background: rgba(45, 74, 66, .08)
+}
+
+.budget-bar i {
+	background: #4fb8a0
+}
+
+/* ===== 排班 Hero：中等深度纯色，去渐变，保留星空动画可见 ===== */
+.shift-hero {
+	background: #5c9488;
+	color: #fff;
+	box-shadow: 0 8px 24px rgba(45, 74, 66, .12)
+}
+
+.shift-hero small,
+.shift-badge {
+	color: #cfe5df
+}
+
+.shift-hero strong {
+	color: #fff
+}
+
+.shift-hero p {
+	color: #cfe5df
+}
+
+.shift-time {
+	color: #bdd9d2
+}
+
+.shift-hero .progress {
+	background: rgba(255, 255, 255, .18)
+}
+
+.shift-hero .progress i {
+	background: #a8e4d4
+}
+
+.shift-hero .progress-foot {
+	color: #c5ddd6
+}
+
+.shift-hero .progress-foot b {
+	color: #fff
+}
+
+/* ===== FAB：纯色，去渐变 ===== */
+.fab {
+	background: #4fb8a0;
+	box-shadow: 0 10px 24px rgba(79, 184, 160, .3)
+}
+
+.fab:active {
+	box-shadow: 0 6px 16px rgba(79, 184, 160, .25)
+}
+
+/* ===== 主按钮 ===== */
+.primary,
+.add-line button {
+	background: #4fb8a0
+}
+
+/* ===== 日历格子：更清新浅色系 ===== */
+.day.expense-day {
+	background: #f0f7f4;
+	color: #4e6b63
+}
+
+.day.expense-day.no-spend {
+	background: #f5f3ee;
+	color: #9a9a8e
+}
+
+.day.expense-day.spent,
+.day.expense-day.past-zero {
+	background: #dff0e9
+}
+
+.day.expense-day.spent .day-top b,
+.day.expense-day.spent .day-actual,
+.day.expense-day.past-zero .day-top b,
+.day.expense-day.past-zero .day-actual {
+	color: #2f8a74
+}
+
+.day.expense-day.over {
+	background: #fbeae5
+}
+
+.day.expense-day.over .day-top b,
+.day.expense-day.over .day-actual {
+	color: #c96a58 !important
+}
+
+/* 今日高亮 */
+.calendar-card .day.expense-day.today,
+.day.expense-day.today {
+	outline-color: #4fb8a0;
+	box-shadow: 0 3px 10px rgba(79, 184, 160, .15)
+}
+
+/* 选中态 */
+.day.expense-day.selected {
+	outline: 2px solid #3a9a84;
+	outline-offset: -2px
+}
+
+/* ===== 导航 ===== */
+nav {
+	background: rgba(255, 255, 255, .97);
+	border-top-color: rgba(216, 236, 228, .95)
+}
+
+nav button {
+	color: #9ab0aa
+}
+
+nav button.on {
+	color: #4fb8a0
+}
+
+/* ===== 统计卡片 ===== */
+.stat-card {
+	box-shadow: 0 4px 14px rgba(45, 74, 66, .05)
+}
+
+.daily-card {
+	background: #f7fbf9
+}
+
+/* ===== 通用卡片 ===== */
+.card {
+	box-shadow: 0 4px 16px rgba(45, 74, 66, .05)
+}
+
+/* ===== 图标 & 垃圾桶 ===== */
+.record-icon,
+.setting-icon {
+	background: #e6f2ed
+}
+
+.trash {
+	background: #fbeae5;
+	color: #e07a6a
+}
+
+/* ===== 顶部按钮 ===== */
+.top-setting,
+.icon-btn,
+.close {
+	color: #4fb8a0;
+	background: rgba(255, 255, 255, .96)
+}
+
+/* ===== 周期导航 ===== */
+.cycle-nav b {
+	color: #2d4a42
+}
+
+.cycle-arrow {
+	color: #4fb8a0;
+	background: #f0f7f4
+}
+
+/* ===== 设置页 ===== */
+.setting-item b {
+	color: #2d4a42
+}
+
+.setting-item small {
+	color: #7a968e
+}
+
+.group-title {
+	color: #7a968e
+}
+
+/* ===== Modal ===== */
+.modal-head h3 {
+	color: #2d4a42
+}
+
+.modal-mask-fab-panel .modal-head h3 {
+	color: #4fb8a0
+}
+
+/* ===== 消费入账动画环 ===== */
+.expense-receipt-fx .balance-impact-ring {
+	border-color: rgba(79, 184, 160, .6);
+	box-shadow: 0 0 0 6px rgba(79, 184, 160, .08)
+}
+
