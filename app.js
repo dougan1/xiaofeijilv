@@ -22,10 +22,45 @@ state.cloud.binId='6ac3ab79ffd5d160534f4cc5';
 state.cloud.accessKey='$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 state.cloud.autoSync=true;
 state.cloud.autoPull=true;
-const APP_VERSION='V64';
+const APP_VERSION='V65';
 const oldDefaultCategories=['餐饮','交通','购物','娱乐','生活','其他'];
 if(!Array.isArray(state.categories)||!state.categories.length||state.categories.length===oldDefaultCategories.length&&state.categories.every(x=>oldDefaultCategories.includes(x)))state.categories=defaultState().categories;
 state.records=Array.isArray(state.records)?state.records:[];state.tools=Array.isArray(state.tools)?state.tools:[];state.cycleBudgets=state.cycleBudgets&&typeof state.cycleBudgets==='object'?state.cycleBudgets:{};state.expectedAllocations=state.expectedAllocations&&typeof state.expectedAllocations==='object'?state.expectedAllocations:{};if(state.expectedAllocationsVersion!==2){state.expectedAllocations={};state.expectedAllocationsVersion=2;}state.consumeStart=state.consumeStart||state.periodStart;state.consumeEnd=state.consumeEnd||state.periodEnd;state.scheduleStart=state.scheduleStart||state.periodStart;state.scheduleEnd=state.scheduleEnd||state.periodEnd;
+
+function validISO(v){return typeof v==='string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(parseDate(v).getTime())}
+function firstValid(...vs){return vs.find(validISO)||''}
+function normalizeCloudData(d, previous){
+  const base=defaultState();
+  const prev=previous||{};
+  const settings=d?.settings&&typeof d.settings==='object'?d.settings:{};
+  const next={...d};
+  next.periodStart=firstValid(d?.periodStart,d?.consumeStart,settings.consumeStart,prev.periodStart,base.periodStart);
+  next.periodEnd=firstValid(d?.periodEnd,d?.consumeEnd,settings.consumeEnd,prev.periodEnd,base.periodEnd);
+  if(!validISO(next.periodStart)) next.periodStart=base.periodStart;
+  if(!validISO(next.periodEnd) || next.periodEnd<next.periodStart) next.periodEnd=addDays(next.periodStart,29);
+  next.consumeStart=firstValid(d?.consumeStart,settings.consumeStart,next.periodStart,prev.consumeStart,next.periodStart);
+  next.consumeEnd=firstValid(d?.consumeEnd,settings.consumeEnd,next.periodEnd,prev.consumeEnd,next.periodEnd);
+  if(!validISO(next.consumeStart)) next.consumeStart=next.periodStart;
+  if(!validISO(next.consumeEnd) || next.consumeEnd<next.consumeStart) next.consumeEnd=next.periodEnd;
+  next.scheduleStart=firstValid(d?.scheduleStart,settings.scheduleStart,prev.scheduleStart,next.periodStart);
+  next.scheduleEnd=firstValid(d?.scheduleEnd,settings.scheduleEnd,prev.scheduleEnd,next.periodEnd);
+  if(!validISO(next.scheduleStart)) next.scheduleStart=next.periodStart;
+  if(!validISO(next.scheduleEnd) || next.scheduleEnd<next.scheduleStart) next.scheduleEnd=next.periodEnd;
+  next.budget=Number(d?.budget??settings.budget??prev.budget??base.budget); if(!Number.isFinite(next.budget)) next.budget=base.budget;
+  next.cycleBudgets=d?.cycleBudgets&&typeof d.cycleBudgets==='object'?d.cycleBudgets:(prev.cycleBudgets||{});
+  next.categories=Array.isArray(d?.categories)&&d.categories.length?d.categories:(prev.categories?.length?prev.categories:base.categories);
+  next.records=Array.isArray(d?.records)?d.records:[];
+  next.records=next.records.map((r,i)=>({...r,id:r?.id!=null?String(r.id):String(Date.now()+i),date:validISO(r?.date)?r.date:next.consumeStart,amount:Number.isFinite(Number(r?.amount))?Number(r.amount):0,category:r?.category||'其他',name:r?.name||''}));
+  next.expectedAllocations=d?.expectedAllocations&&typeof d.expectedAllocations==='object'?d.expectedAllocations:{};
+  next.expectedAllocationsVersion=Number(d?.expectedAllocationsVersion||2);
+  next.schedule=Object.assign(base.schedule,prev.schedule||{},d?.schedule||{});
+  next.schedule.startDate=firstValid(next.schedule.startDate,next.scheduleStart,next.periodStart,base.schedule.startDate);
+  next.schedule.overrides=next.schedule.overrides&&typeof next.schedule.overrides==='object'?next.schedule.overrides:{};
+  next.schedule.cycle=Array.isArray(next.schedule.cycle)&&next.schedule.cycle.length?next.schedule.cycle:base.schedule.cycle;
+  next.tools=Array.isArray(d?.tools)?d.tools:(Array.isArray(prev.tools)?prev.tools:base.tools);
+  return next;
+}
+
 const cycleKey=(s,e)=>`${s}_${e}`;
 if(state.cycleBudgets[cycleKey(state.periodStart,state.periodEnd)]==null) state.cycleBudgets[cycleKey(state.periodStart,state.periodEnd)]=Number(state.budget||0);
 state.budget=Number(state.cycleBudgets[cycleKey(state.consumeStart,state.consumeEnd)]??state.budget??0);
@@ -159,7 +194,8 @@ async function cloudPull(reRender=true,quiet=false){
   try{
     const res=await cloudRead();const payload=res?.record??res;const d=payload?.data;
     if(!d)throw new Error('云端数据格式不正确');
-    Object.assign(state,d);
+    const previous=JSON.parse(JSON.stringify(state));
+    Object.assign(state,normalizeCloudData(d,previous));
     state.cloud=Object.assign(state.cloud||{},{binId:'6ac3ab79ffd5d160534f4cc5',accessKey:'$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.',autoSync:true,autoPull:true,status:'已连接',lastSync:new Date().toLocaleString('zh-CN',{hour12:false}),dirty:false,initialized:true});
     rawLocalSave();if(reRender)render();return true;
   }catch(e){state.cloud.status='连接失败';rawLocalSave();if(!quiet&&reRender)alert(e.message||'云端连接失败');return false}
@@ -171,13 +207,15 @@ async function cloudAutoConnect(){
   try{
     const res=await cloudRead();const payload=res?.record??res;const d=payload?.data;
     if(!d)throw new Error('云端数据格式不正确');
+    const previous=JSON.parse(JSON.stringify(state));
+    const normalized=normalizeCloudData(d,previous);
     // 新 Bin 还是空模板且本机已经有数据：优先保留本机并首次上传，避免自动登录把本机数据覆盖掉。
     if(!hasCloudUserData(d)&&hasLocalUserData()){
       state.cloud.status='首次同步';rawLocalSave();cloudBusy=false;
       await cloudPush();
       render();
     }else{
-      Object.assign(state,d);
+      Object.assign(state,normalized);
       state.cloud=Object.assign(state.cloud||{},{binId:'6ac3ab79ffd5d160534f4cc5',accessKey:'$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.',autoSync:true,autoPull:true,status:'已连接',lastSync:new Date().toLocaleString('zh-CN',{hour12:false}),dirty:false,initialized:true});
       rawLocalSave();render();
     }
