@@ -10152,3 +10152,18 @@ nav button.on i {
 	top: auto !important;
 	left: auto !important;
 }
+
+/* ===== V100：工具卡片等宽，网址过长不撑开 ===== */
+.tools-grid {
+	grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+.tool-card {
+	min-width: 0 !important;
+	overflow: hidden !important;
+}
+.tool-card small {
+	white-space: nowrap !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	max-width: 100% !important;
+}
