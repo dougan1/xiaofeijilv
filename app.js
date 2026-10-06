@@ -102,7 +102,7 @@
 	state.cloud.accessKey = '$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 	state.cloud.autoSync = true;
 	state.cloud.autoPull = true;
-	const APP_VERSION = 'V96';
+	const APP_VERSION = 'V99';
 	const oldDefaultCategories = ['餐饮', '交通', '购物', '娱乐', '生活', '其他'];
 	if (!Array.isArray(state.categories) || !state.categories.length || state.categories.length ===
 		oldDefaultCategories.length && state.categories.every(x => oldDefaultCategories.includes(x))) state
@@ -606,7 +606,7 @@
 			state.cloud.status = '自动连接已开启';
 			rawLocalSave();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});;
 			await cloudAutoConnect()
 		}
@@ -929,7 +929,7 @@
 		const sMaxLen = anim.snake?.maxLength ?? 20;
 		const sColor = anim.snake?.color ?? '#45b8a0';
 
-		return `<main class="page-main settings-page"><div class="page-topbar"><div class="page-period">应用设置</div></div><section class="setting-group"><div class="group-title">常用设置</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类，可自定义</small></div><em>›</em></button><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode==='normal'?'正常模式':'倒班模式'} · ${state.schedule.startDate}</small></div><em>›</em></button><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云端数据库</b><small>${escapeHtml(state.cloud?.status||'未连接')} · ${state.cloud?.autoSync===false?'手动同步':'自动同步'}</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">动画与特效</div><div class="anim-setting-card"><div class="anim-setting-title">🐍 日历小蛇</div><div class="anim-slider-row"><label>移动速度</label><input type="range" id="sSpeed" min="0.5" max="4" step="0.1" value="${sSpeed}"><span class="anim-val" id="sSpeedVal">${sSpeed}</span></div><div class="anim-slider-row"><label>最大长度</label><input type="range" id="sMaxLen" min="3" max="30" step="1" value="${sMaxLen}"><span class="anim-val" id="sMaxLenVal">${sMaxLen}</span></div><div class="anim-color-row"><label>蛇身颜色</label><input type="color" id="sColor" value="${sColor}"></div></div></section><section class="setting-group"><div class="group-title">应用信息</div><div class="setting-item version-item"><span class="setting-icon">ℹ️</span><div><b>版本号</b><small>${APP_VERSION}</small></div><em></em></div></section><section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openReset"><span class="setting-icon">♻️</span><div><b class="danger-text">恢复默认数据</b><small>清除本机消费、排班和工具记录</small></div><em>›</em></button></section><div class="settings-tip">周期、金额等高频设置已保留在对应页面右上角，避免重复。</div></main>`
+		return `<main class="page-main settings-page"><div class="page-topbar"><div class="page-period">应用设置</div></div><section class="setting-group"><div class="group-title">常用设置</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类，可自定义</small></div><em>›</em></button><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode==='normal'?'正常模式':'倒班模式'} · ${state.schedule.startDate}</small></div><em>›</em></button><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云端数据库</b><small>${escapeHtml(state.cloud?.status||'未连接')} · ${state.cloud?.autoSync===false?'手动同步':'自动同步'}</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">动画与特效</div><div class="anim-setting-card"><div class="anim-setting-title">🐍 日历小蛇</div><div class="anim-slider-row"><label>移动速度</label><input type="range" id="sSpeed" min="0.5" max="4" step="0.1" value="${sSpeed}"><span class="anim-val" id="sSpeedVal">${sSpeed}</span></div><div class="anim-slider-row"><label>最大长度</label><input type="range" id="sMaxLen" min="3" max="30" step="1" value="${sMaxLen}"><span class="anim-val" id="sMaxLenVal">${sMaxLen}</span></div><div class="anim-color-row"><label>蛇身颜色</label><input type="color" id="sColor" value="${sColor}"></div></div></section><section class="setting-group"><div class="group-title">应用信息</div><button class="setting-item version-item" id="versionRefresh"><span class="setting-icon">🔄</span><div><b>版本号</b><small>${APP_VERSION} · 点击刷新</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openReset"><span class="setting-icon">♻️</span><div><b class="danger-text">恢复默认数据</b><small>清除本机消费、排班和工具记录</small></div><em>›</em></button></section><div class="settings-tip">周期、金额等高频设置已保留在对应页面右上角，避免重复。</div></main>`
 	}
 
 	function consumeSettingsModal() {
@@ -1007,7 +1007,7 @@
 			}
 			save();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
@@ -1035,7 +1035,7 @@
 			state.selectedDate = '';
 			save();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
@@ -1352,7 +1352,7 @@
 				state.records = state.records.filter(x => x.id !== id);
 				save();
 				closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 			}
 		};
@@ -1375,7 +1375,7 @@
 				if (date !== oldDate) recalcAfterConsumption(date);
 				save();
 				closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});;
 				return;
 			}
@@ -1420,7 +1420,7 @@
 			s.nightEnd = m.querySelector('#nightEnd').value;
 			save();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
@@ -1447,7 +1447,7 @@
 			});
 			save();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
@@ -1462,19 +1462,20 @@
 			state.schedule.overrides[date] = b.dataset.pick;
 			save();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 		});
 		m.querySelector('#autoShift').onclick = () => {
 			delete state.schedule.overrides[date];
 			save();
 			closeModal(m);
-					trender();
+					render();
 					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
 
 	function bind() {
+		document.getElementById('versionRefresh')?.addEventListener('click', () => location.reload());
 		document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
 			state.tab = b.dataset.tab;
 			state.selectedDate = '';
