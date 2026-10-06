@@ -8145,3 +8145,1573 @@ nav button.on {
 	box-shadow: 0 0 0 6px rgba(79, 184, 160, .08)
 }
 
+
+/* ===== V71 优化：表情动效/夜班修复/剩余天数/hero动画/点击反馈/配色/排班日历 ===== */
+
+/* ---------- 配色再优化：更清新通透 ---------- */
+:root {
+	--ui-bg: #f0f8f5;
+	--ui-surface: #ffffff;
+	--ui-ink: #2b4a44;
+	--ui-muted: #7a9690;
+	--ui-primary: #45b8a0;
+	--ui-primary-2: #7ad4c0;
+	--ui-accent: #f0b878;
+	--ui-danger: #e08570;
+	--ui-line: #dcebe5;
+	--ui-shadow: rgba(43, 74, 68, .05)
+}
+
+html,
+body {
+	background: var(--ui-bg);
+	color: var(--ui-ink)
+}
+
+#app {
+	background: #f3f9f6
+}
+
+/* ---------- Hero 卡片：更浅更通透 ---------- */
+.hero-card {
+	background: #e8f4ef;
+	color: #2b4a44;
+	box-shadow: 0 8px 24px rgba(43, 74, 68, .07)
+}
+
+.hero-card small {
+	color: #6d8a84
+}
+
+.hero-card strong {
+	color: #2b4a44
+}
+
+.hero-foot,
+.hero-foot span {
+	color: #7a9690
+}
+
+.budget-bar {
+	background: rgba(43, 74, 68, .07)
+}
+
+.budget-bar i {
+	background: #45b8a0
+}
+
+/* ---------- Hero 背景浮动光斑动画 ---------- */
+.hero-card {
+	position: relative;
+	overflow: hidden
+}
+
+.hero-card>*:not(.hero-bg-animate) {
+	position: relative;
+	z-index: 1
+}
+
+.hero-bg-animate {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 0
+}
+
+.hero-orb {
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(1px)
+}
+
+.hero-orb.orb-1 {
+	width: 130px;
+	height: 130px;
+	background: radial-gradient(circle, rgba(255, 255, 255, .5), rgba(255, 255, 255, 0));
+	top: -40px;
+	right: -25px;
+	animation: orbFloat1 9s ease-in-out infinite
+}
+
+.hero-orb.orb-2 {
+	width: 90px;
+	height: 90px;
+	background: radial-gradient(circle, rgba(122, 212, 192, .35), rgba(122, 212, 192, 0));
+	bottom: -25px;
+	left: 8%;
+	animation: orbFloat2 11s ease-in-out infinite
+}
+
+.hero-orb.orb-3 {
+	width: 55px;
+	height: 55px;
+	background: radial-gradient(circle, rgba(240, 184, 120, .3), rgba(240, 184, 120, 0));
+	top: 35%;
+	left: 58%;
+	animation: orbFloat3 7s ease-in-out infinite
+}
+
+@keyframes orbFloat1 {
+
+	0%,
+	100% {
+		transform: translate(0, 0) scale(1)
+	}
+
+	50% {
+		transform: translate(-18px, 14px) scale(1.1)
+	}
+}
+
+@keyframes orbFloat2 {
+
+	0%,
+	100% {
+		transform: translate(0, 0) scale(1)
+	}
+
+	50% {
+		transform: translate(14px, -12px) scale(1.12)
+	}
+}
+
+@keyframes orbFloat3 {
+
+	0%,
+	100% {
+		transform: translate(0, 0) scale(1)
+	}
+
+	50% {
+		transform: translate(-10px, -10px) scale(1.18)
+	}
+}
+
+/* ---------- 超预算表情：左右摇摆 ---------- */
+.face-wobble {
+	animation: faceWobble 1.6s ease-in-out infinite;
+	transform-origin: center bottom;
+	display: inline-block
+}
+
+@keyframes faceWobble {
+
+	0%,
+	100% {
+		transform: rotate(-7deg)
+	}
+
+	50% {
+		transform: rotate(7deg)
+	}
+}
+
+/* ---------- 手机点击反馈动画 ---------- */
+button:not(.fab):not(.cycle-arrow):not(.close):active {
+	transform: scale(.96);
+	transition: transform .1s ease-out
+}
+
+.stat-card:active {
+	transform: scale(.97);
+	transition: transform .1s ease-out
+}
+
+.tool-card:active {
+	transform: scale(.96);
+	transition: transform .1s ease-out
+}
+
+.setting-item:active {
+	transform: scale(.985);
+	transition: transform .1s ease-out
+}
+
+.day:active {
+	transform: scale(.94);
+	transition: transform .1s ease-out
+}
+
+.record:active {
+	transform: scale(.99);
+	transition: transform .1s ease-out
+}
+
+.cycle-arrow:active {
+	transform: scale(.88);
+	transition: transform .1s ease-out
+}
+
+/* ---------- FAB 按钮 ---------- */
+.fab {
+	background: #45b8a0;
+	box-shadow: 0 10px 26px rgba(69, 184, 160, .32);
+	transition: transform .15s ease, box-shadow .15s ease
+}
+
+.fab:active {
+	transform: scale(.92);
+	box-shadow: 0 6px 16px rgba(69, 184, 160, .28)
+}
+
+/* ---------- 主按钮 ---------- */
+.primary,
+.add-line button {
+	background: #45b8a0;
+	transition: transform .1s ease-out, opacity .1s ease-out
+}
+
+.primary:active {
+	transform: scale(.97);
+	opacity: .9
+}
+
+/* ---------- 消费日历：更清新柔和 ---------- */
+.day.expense-day {
+	background: #f1f8f5;
+	color: #4e6b65;
+	transition: transform .12s ease, box-shadow .12s ease
+}
+
+.day.expense-day.no-spend {
+	background: #f5f3ee;
+	color: #9a9a8e
+}
+
+.day.expense-day.spent,
+.day.expense-day.past-zero {
+	background: #dff0e9
+}
+
+.day.expense-day.spent .day-top b,
+.day.expense-day.spent .day-actual,
+.day.expense-day.past-zero .day-top b,
+.day.expense-day.past-zero .day-actual {
+	color: #2f8a74
+}
+
+.day.expense-day.over {
+	background: #fbeae5
+}
+
+.day.expense-day.over .day-top b,
+.day.expense-day.over .day-actual {
+	color: #c96a58 !important
+}
+
+.calendar-card .day.expense-day.today,
+.day.expense-day.today {
+	outline-color: #45b8a0;
+	box-shadow: 0 3px 12px rgba(69, 184, 160, .16)
+}
+
+.day.expense-day.selected {
+	outline: 2px solid #389a84;
+	outline-offset: -2px
+}
+
+/* ---------- 排班日历布局优化 ---------- */
+.schedule-calendar-box {
+	position: relative
+}
+
+.schedule-calendar-box .calendar {
+	gap: 9px 7px
+}
+
+.schedule-calendar-box .day.shift {
+	min-height: 74px;
+	padding: 10px 5px;
+	border-radius: 14px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	background: #e8f4ef;
+	transition: transform .12s ease, box-shadow .12s ease
+}
+
+.schedule-calendar-box .day.shift .day-top {
+	height: auto;
+	line-height: 1
+}
+
+.schedule-calendar-box .day.shift .day-top b {
+	font-size: 12px;
+	color: #4e6b65
+}
+
+.schedule-calendar-box .day.shift span {
+	font-size: 14px;
+	font-weight: 700;
+	color: #3a8a74;
+	line-height: 1
+}
+
+.schedule-calendar-box .day.shift.rest {
+	background: #f0f2f1
+}
+
+.schedule-calendar-box .day.shift.rest .day-top b {
+	color: #8a9490
+}
+
+.schedule-calendar-box .day.shift.rest span {
+	color: #909a96
+}
+
+/* 夜班格子：淡蓝紫调 */
+.schedule-calendar-box .day.shift:not(.rest):not(.today) span {
+	color: #5a7a9a
+}
+
+.schedule-calendar-box .day.shift.today {
+	outline: 2px solid #45b8a0;
+	outline-offset: -2px;
+	box-shadow: 0 3px 12px rgba(69, 184, 160, .16)
+}
+
+.schedule-calendar-box .day.shift.selected {
+	outline: 2px solid #389a84;
+	outline-offset: -2px
+}
+
+.schedule-calendar-box .blank {
+	min-height: 74px
+}
+
+/* 排班锁定按钮 */
+.schedule-lock {
+	background: rgba(255, 255, 255, .9);
+	box-shadow: 0 2px 8px rgba(43, 74, 68, .1)
+}
+
+/* ---------- 统计卡片 ---------- */
+.stat-card {
+	box-shadow: 0 4px 14px rgba(43, 74, 68, .05);
+	transition: transform .12s ease, box-shadow .12s ease
+}
+
+.daily-card {
+	background: #f7fbf9
+}
+
+/* ---------- 通用卡片 ---------- */
+.card {
+	box-shadow: 0 4px 16px rgba(43, 74, 68, .05)
+}
+
+/* ---------- 导航 ---------- */
+nav {
+	background: rgba(255, 255, 255, .97);
+	border-top-color: rgba(220, 235, 229, .95)
+}
+
+nav button {
+	color: #9ab0aa;
+	transition: color .15s ease, transform .1s ease-out
+}
+
+nav button:active {
+	transform: scale(.92)
+}
+
+nav button.on {
+	color: #45b8a0
+}
+
+/* ---------- 图标 & 垃圾桶 ---------- */
+.record-icon,
+.setting-icon {
+	background: #e6f2ed
+}
+
+.trash {
+	background: #fbeae5;
+	color: #e08570;
+	transition: transform .1s ease-out
+}
+
+.trash:active {
+	transform: scale(.88)
+}
+
+/* ---------- 顶部按钮 ---------- */
+.top-setting,
+.icon-btn,
+.close {
+	color: #45b8a0;
+	background: rgba(255, 255, 255, .96);
+	transition: transform .1s ease-out
+}
+
+.top-setting:active,
+.icon-btn:active {
+	transform: scale(.9)
+}
+
+/* ---------- 周期导航 ---------- */
+.cycle-nav b {
+	color: #2b4a44
+}
+
+.cycle-arrow {
+	color: #45b8a0;
+	background: #f0f8f5;
+	transition: transform .1s ease-out, background .15s ease
+}
+
+/* ---------- 设置页 ---------- */
+.setting-item b {
+	color: #2b4a44
+}
+
+.setting-item small {
+	color: #7a9690
+}
+
+.group-title {
+	color: #7a9690
+}
+
+/* ---------- Modal ---------- */
+.modal-head h3 {
+	color: #2b4a44
+}
+
+.modal-mask-fab-panel .modal-head h3 {
+	color: #45b8a0
+}
+
+/* ---------- 消费入账动画环 ---------- */
+.expense-receipt-fx .balance-impact-ring {
+	border-color: rgba(69, 184, 160, .6);
+	box-shadow: 0 0 0 6px rgba(69, 184, 160, .08)
+}
+
+/* ---------- 小屏幕适配 ---------- */
+@media(max-width:360px) {
+	.schedule-calendar-box .calendar {
+		gap: 7px 5px
+	}
+
+	.schedule-calendar-box .day.shift {
+		min-height: 68px;
+		padding: 8px 4px
+	}
+
+	.schedule-calendar-box .blank {
+		min-height: 68px
+	}
+
+	.schedule-calendar-box .day.shift span {
+		font-size: 12px
+	}
+}
+
+/* ---------- 减少动画偏好 ---------- */
+@media(prefers-reduced-motion:reduce) {
+
+	.face-wobble,
+	.hero-orb {
+		animation: none !important
+	}
+}
+
+
+/* ===== V72 修复：表情摇摆优先级 + 卡片背景重设计 ===== */
+
+/* ---------- 表情摇摆：提高优先级覆盖旧的 faceFloat ---------- */
+.day.expense-day .day-face.face-wobble {
+	animation: faceWobble 1.6s ease-in-out infinite;
+	transform-origin: center bottom;
+	display: inline-block
+}
+
+/* ---------- 卡片背景：隐藏旧光斑，换成波纹涟漪 ---------- */
+.hero-orb {
+	display: none !important;
+	animation: none !important
+}
+
+.hero-bg-animate::before,
+.hero-bg-animate::after {
+	content: '';
+	position: absolute;
+	top: 38%;
+	left: 50%;
+	width: 60px;
+	height: 60px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, .3);
+	transform: translate(-50%, -50%);
+	pointer-events: none
+}
+
+.hero-bg-animate::before {
+	animation: heroRipple 5s ease-out infinite
+}
+
+.hero-bg-animate::after {
+	animation: heroRipple 5s ease-out infinite;
+	animation-delay: 2.5s
+}
+
+@keyframes heroRipple {
+	0% {
+		width: 50px;
+		height: 50px;
+		opacity: .55;
+		border-width: 3px
+	}
+
+	70% {
+		opacity: .15
+	}
+
+	100% {
+		width: 380px;
+		height: 380px;
+		opacity: 0;
+		border-width: 1px
+	}
+}
+
+/* 减少动画偏好 */
+@media(prefers-reduced-motion:reduce) {
+	.hero-bg-animate::before,
+	.hero-bg-animate::after {
+		animation: none !important;
+		display: none !important
+	}
+}
+
+
+/* ===== V73 修复：蛇移到排班日历 + hero动画重设计 + 默认消费页 ===== */
+
+/* ---------- 隐藏旧的 hero 动画元素 ---------- */
+.hero-orb,
+.hero-bg-animate::before,
+.hero-bg-animate::after {
+	display: none !important;
+	animation: none !important
+}
+
+/* ---------- 柔和色块：缓慢漂移+呼吸 ---------- */
+.hero-blob {
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(6px);
+	pointer-events: none
+}
+
+.hero-blob.blob-1 {
+	width: 150px;
+	height: 150px;
+	background: radial-gradient(circle, rgba(69, 184, 160, .24), rgba(69, 184, 160, 0) 70%);
+	top: -45px;
+	right: -35px;
+	animation: blobDrift1 14s ease-in-out infinite
+}
+
+.hero-blob.blob-2 {
+	width: 110px;
+	height: 110px;
+	background: radial-gradient(circle, rgba(240, 184, 120, .2), rgba(240, 184, 120, 0) 70%);
+	bottom: -35px;
+	left: 8%;
+	animation: blobDrift2 18s ease-in-out infinite
+}
+
+@keyframes blobDrift1 {
+
+	0%,
+	100% {
+		transform: translate(0, 0) scale(1)
+	}
+
+	33% {
+		transform: translate(-22px, 16px) scale(1.12)
+	}
+
+	66% {
+		transform: translate(12px, -12px) scale(.94)
+	}
+}
+
+@keyframes blobDrift2 {
+
+	0%,
+	100% {
+		transform: translate(0, 0) scale(1)
+	}
+
+	50% {
+		transform: translate(28px, -20px) scale(1.15)
+	}
+}
+
+/* ---------- 旋转虚线圆环 ---------- */
+.hero-ring {
+	position: absolute;
+	width: 170px;
+	height: 170px;
+	border: 1.5px dashed rgba(255, 255, 255, .28);
+	border-radius: 50%;
+	top: 50%;
+	left: 68%;
+	transform: translate(-50%, -50%);
+	animation: ringSpin 28s linear infinite;
+	pointer-events: none
+}
+
+@keyframes ringSpin {
+	from {
+		transform: translate(-50%, -50%) rotate(0deg)
+	}
+
+	to {
+		transform: translate(-50%, -50%) rotate(360deg)
+	}
+}
+
+/* ---------- 上升光点：从底部飘到顶部，左右摇摆 ---------- */
+.hero-spark {
+	position: absolute;
+	border-radius: 50%;
+	bottom: -10px;
+	opacity: 0;
+	pointer-events: none;
+	animation: sparkRise 9s ease-in-out infinite
+}
+
+.hero-spark.s1 {
+	left: 18%;
+	width: 5px;
+	height: 5px;
+	background: rgba(255, 255, 255, .55);
+	animation-delay: 0s
+}
+
+.hero-spark.s2 {
+	left: 42%;
+	width: 4px;
+	height: 4px;
+	background: rgba(69, 184, 160, .55);
+	animation-delay: 2.2s
+}
+
+.hero-spark.s3 {
+	left: 65%;
+	width: 6px;
+	height: 6px;
+	background: rgba(240, 184, 120, .5);
+	animation-delay: 4.5s
+}
+
+.hero-spark.s4 {
+	left: 85%;
+	width: 3.5px;
+	height: 3.5px;
+	background: rgba(255, 255, 255, .45);
+	animation-delay: 6.8s
+}
+
+@keyframes sparkRise {
+	0% {
+		bottom: -10px;
+		opacity: 0;
+		transform: translateX(0) scale(.8)
+	}
+
+	12% {
+		opacity: .85;
+		transform: translateX(5px) scale(1)
+	}
+
+	50% {
+		transform: translateX(-8px) scale(1.1)
+	}
+
+	85% {
+		opacity: .35
+	}
+
+	100% {
+		bottom: 105%;
+		opacity: 0;
+		transform: translateX(6px) scale(.7)
+	}
+}
+
+/* 减少动画偏好 */
+@media(prefers-reduced-motion:reduce) {
+
+	.hero-blob,
+	.hero-ring,
+	.hero-spark {
+		animation: none !important
+	}
+
+	.hero-spark {
+		display: none !important
+	}
+}
+
+
+/* ===== V74 修复：蛇优化 + hero行星动画 + 自定义数字小键盘 ===== */
+
+/* ---------- 隐藏旧的 hero 动画元素 ---------- */
+.hero-blob,
+.hero-ring,
+.hero-spark {
+	display: none !important;
+	animation: none !important
+}
+
+/* ---------- Hero 行星轨道动画 ---------- */
+.hero-planet {
+	position: absolute;
+	border-radius: 50%;
+	pointer-events: none;
+	top: 50%;
+	left: 50%
+}
+
+.hero-planet.p1 {
+	width: 80px;
+	height: 80px;
+	background: rgba(69, 184, 160, .22);
+	animation: orbit1 10s linear infinite
+}
+
+.hero-planet.p2 {
+	width: 55px;
+	height: 55px;
+	background: rgba(240, 184, 120, .24);
+	animation: orbit2 14s linear infinite reverse
+}
+
+.hero-planet.p3 {
+	width: 30px;
+	height: 30px;
+	background: rgba(255, 255, 255, .38);
+	animation: orbit3 8s linear infinite
+}
+
+.hero-planet.p4 {
+	width: 18px;
+	height: 18px;
+	background: rgba(69, 184, 160, .42);
+	animation: orbit4 16s linear infinite reverse
+}
+
+@keyframes orbit1 {
+	0% { transform: translate(-50%, -50%) translate(0, -80px) }
+	25% { transform: translate(-50%, -50%) translate(80px, 0) }
+	50% { transform: translate(-50%, -50%) translate(0, 80px) }
+	75% { transform: translate(-50%, -50%) translate(-80px, 0) }
+	100% { transform: translate(-50%, -50%) translate(0, -80px) }
+}
+
+@keyframes orbit2 {
+	0% { transform: translate(-50%, -50%) translate(0, -55px) }
+	25% { transform: translate(-50%, -50%) translate(55px, 0) }
+	50% { transform: translate(-50%, -50%) translate(0, 55px) }
+	75% { transform: translate(-50%, -50%) translate(-55px, 0) }
+	100% { transform: translate(-50%, -50%) translate(0, -55px) }
+}
+
+@keyframes orbit3 {
+	0% { transform: translate(-50%, -50%) translate(0, -100px) }
+	25% { transform: translate(-50%, -50%) translate(100px, 0) }
+	50% { transform: translate(-50%, -50%) translate(0, 100px) }
+	75% { transform: translate(-50%, -50%) translate(-100px, 0) }
+	100% { transform: translate(-50%, -50%) translate(0, -100px) }
+}
+
+@keyframes orbit4 {
+	0% { transform: translate(-50%, -50%) translate(0, -35px) }
+	25% { transform: translate(-50%, -50%) translate(35px, 0) }
+	50% { transform: translate(-50%, -50%) translate(0, 35px) }
+	75% { transform: translate(-50%, -50%) translate(-35px, 0) }
+	100% { transform: translate(-50%, -50%) translate(0, -35px) }
+}
+
+/* ---------- 金额输入框（只读，点击弹小键盘） ---------- */
+.amount-input {
+	cursor: pointer;
+	background: #f7fbf9 !important;
+	-webkit-user-select: none;
+	user-select: none
+}
+
+.amount-input:focus {
+	outline: none;
+	border-color: #45b8a0 !important
+}
+
+/* ---------- 自定义数字小键盘 ---------- */
+.custom-keypad {
+	display: none;
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	background: #ffffff;
+	border-radius: 18px 18px 0 0;
+	box-shadow: 0 -6px 24px rgba(43, 74, 68, .12);
+	padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+	z-index: 2000
+}
+
+.custom-keypad.show {
+	display: block;
+	animation: keypadUp .28s cubic-bezier(.22, 1, .36, 1)
+}
+
+@keyframes keypadUp {
+	from { transform: translateY(100%) }
+	to { transform: translateY(0) }
+}
+
+.keypad-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 9px;
+	max-width: 420px;
+	margin: 0 auto
+}
+
+.keypad-grid button {
+	height: 50px;
+	border: none;
+	border-radius: 12px;
+	background: #f0f7f4;
+	color: #2b4a44;
+	font-size: 22px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background .1s ease, transform .1s ease;
+	-webkit-tap-highlight-color: transparent
+}
+
+.keypad-grid button:active {
+	background: #d8ece4;
+	transform: scale(.94)
+}
+
+.keypad-grid .key-dot {
+	font-size: 26px;
+	line-height: 1
+}
+
+.keypad-grid .key-back {
+	background: #fbeae5;
+	color: #e08570;
+	font-size: 20px
+}
+
+.keypad-grid .key-back:active {
+	background: #f5d8cf
+}
+
+.keypad-grid .key-done {
+	grid-column: span 3;
+	height: 46px;
+	background: #45b8a0;
+	color: #fff;
+	font-size: 17px;
+	letter-spacing: 2px
+}
+
+.keypad-grid .key-done:active {
+	background: #3aa890;
+	transform: scale(.98)
+}
+
+/* 小键盘弹出时给 modal 底部留空间 */
+.modal-add-consume .modal-body {
+	padding-bottom: 12px
+}
+
+/* 减少动画偏好 */
+@media(prefers-reduced-motion:reduce) {
+	.hero-planet {
+		animation: none !important
+	}
+
+	.custom-keypad.show {
+		animation: none !important
+	}
+}
+
+
+/* ===== V75：蛇不死/水果修复/绕圈修复 + 小键盘显示 + 今日按钮 + 弹窗动效 + 粒子效果 ===== */
+
+/* ---------- 隐藏旧的行星动画 ---------- */
+.hero-planet {
+	display: none !important;
+	animation: none !important
+}
+
+/* ---------- 粒子 canvas ---------- */
+#heroParticles {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 0
+}
+
+/* ---------- 小键盘金额显示 ---------- */
+.keypad-display {
+	text-align: center;
+	font-size: 28px;
+	font-weight: 700;
+	color: #2b4a44;
+	padding: 6px 0 12px;
+	letter-spacing: 1px;
+	min-height: 40px;
+	line-height: 1.2;
+	border-bottom: 1px solid #e8f0ec;
+	margin-bottom: 12px
+}
+
+/* ---------- 今日按钮 ---------- */
+.today-btn {
+	display: inline-block;
+	margin-left: 8px;
+	padding: 3px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #45b8a0;
+	background: #e8f4ef;
+	border: 1px solid #c8e4da;
+	border-radius: 20px;
+	cursor: pointer;
+	transition: all .15s ease;
+	vertical-align: middle
+}
+
+.today-btn:active {
+	transform: scale(.92);
+	background: #d8ece4
+}
+
+.expense-date-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap
+}
+
+.expense-date-row input {
+	flex: 1;
+	min-width: 120px
+}
+
+/* ---------- 弹窗关闭动画 ---------- */
+.modal-mask {
+	animation: modalFadeIn .2s ease-out
+}
+
+.modal-mask .modal {
+	animation: modalSlideUp .25s cubic-bezier(.22, 1, .36, 1)
+}
+
+@keyframes modalFadeIn {
+	from { opacity: 0 }
+	to { opacity: 1 }
+}
+
+@keyframes modalSlideUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px) scale(.96)
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1)
+	}
+}
+
+.modal-mask.closing {
+	animation: modalFadeOut .22s ease-in forwards
+}
+
+.modal-mask.closing .modal {
+	animation: modalSlideDown .22s ease-in forwards
+}
+
+@keyframes modalFadeOut {
+	from { opacity: 1 }
+	to { opacity: 0 }
+}
+
+@keyframes modalSlideDown {
+	from {
+		opacity: 1;
+		transform: translateY(0) scale(1)
+	}
+	to {
+		opacity: 0;
+		transform: translateY(16px) scale(.96)
+	}
+}
+
+/* FAB 展开面板的关闭动画保持原样 */
+.modal-mask-fab-panel.closing {
+	animation: none
+}
+
+.modal-mask-fab-panel.closing .modal {
+	animation: none
+}
+
+/* ---------- 减少动画偏好 ---------- */
+@media(prefers-reduced-motion:reduce) {
+	.modal-mask,
+	.modal-mask .modal,
+	.modal-mask.closing,
+	.modal-mask.closing .modal {
+		animation: none !important
+	}
+}
+
+
+/* ===== V76：粒子修复 + 蛇防绕圈/走格修复 + 今日按钮位置 ===== */
+
+/* ---------- 日期输入框包裹 ---------- */
+.expense-date-row {
+	display: flex;
+	align-items: center;
+	gap: 0
+}
+
+.expense-date-row > label,
+.expense-date-row {
+	flex-wrap: nowrap
+}
+
+.date-input-wrap {
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	display: inline-block
+}
+
+.date-input-wrap input {
+	width: 100%;
+	padding-right: 54px !important;
+	box-sizing: border-box
+}
+
+/* ---------- 今日按钮：输入框内右侧 ---------- */
+.today-btn {
+	position: absolute;
+	right: 6px;
+	top: 50%;
+	transform: translateY(-50%);
+	margin: 0;
+	padding: 3px 9px;
+	font-size: 11px;
+	font-weight: 600;
+	color: #45b8a0;
+	background: rgba(69, 184, 160, .1);
+	border: 1px solid rgba(69, 184, 160, .3);
+	border-radius: 20px;
+	cursor: pointer;
+	transition: all .15s ease;
+	white-space: nowrap;
+	z-index: 2
+}
+
+.today-btn:active {
+	transform: translateY(-50%) scale(.9);
+	background: rgba(69, 184, 160, .2)
+}
+
+/* ---------- 粒子 canvas 确保显示 ---------- */
+.hero-bg-animate {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 0
+}
+
+#heroParticles {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 0;
+	display: block
+}
+
+/* hero-card 内容在粒子之上 */
+.hero-card>.hero-top,
+.hero-card>.budget-bar,
+.hero-card>.hero-foot {
+	position: relative;
+	z-index: 1
+}
+
+
+/* ===== V77：动画设置页面 + 蛇平滑转弯 + 粒子活跃效果 ===== */
+
+/* ---------- 动画设置卡片 ---------- */
+.anim-setting-card {
+	background: #fff;
+	border-radius: 14px;
+	padding: 16px;
+	margin-bottom: 12px;
+	box-shadow: 0 2px 10px rgba(69, 184, 160, .06)
+}
+
+.anim-setting-card:last-child {
+	margin-bottom: 0
+}
+
+.anim-setting-title {
+	font-size: 15px;
+	font-weight: 700;
+	color: #2b4a44;
+	margin-bottom: 14px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eef5f2
+}
+
+/* ---------- 滑块行 ---------- */
+.anim-slider-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 12px
+}
+
+.anim-slider-row:last-child {
+	margin-bottom: 0
+}
+
+.anim-slider-row label {
+	font-size: 13px;
+	color: #5a7a74;
+	min-width: 64px;
+	flex-shrink: 0
+}
+
+.anim-slider-row input[type="range"] {
+	flex: 1;
+	min-width: 0;
+	height: 4px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: #e0ece7;
+	border-radius: 4px;
+	outline: none;
+	cursor: pointer
+}
+
+.anim-slider-row input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #45b8a0;
+	border: 2px solid #fff;
+	box-shadow: 0 2px 6px rgba(69, 184, 160, .35);
+	cursor: pointer;
+	transition: transform .15s ease
+}
+
+.anim-slider-row input[type="range"]::-webkit-slider-thumb:active {
+	transform: scale(1.2)
+}
+
+.anim-slider-row input[type="range"]::-moz-range-thumb {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: #45b8a0;
+	border: 2px solid #fff;
+	box-shadow: 0 2px 6px rgba(69, 184, 160, .35);
+	cursor: pointer
+}
+
+.anim-val {
+	font-size: 13px;
+	font-weight: 600;
+	color: #45b8a0;
+	min-width: 32px;
+	text-align: right;
+	flex-shrink: 0
+}
+
+/* ---------- 颜色/模式行 ---------- */
+.anim-color-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 12px
+}
+
+.anim-color-row:last-child {
+	margin-bottom: 0
+}
+
+.anim-color-row label {
+	font-size: 13px;
+	color: #5a7a74;
+	min-width: 64px;
+	flex-shrink: 0
+}
+
+.anim-mode-btns {
+	display: flex;
+	gap: 8px;
+	flex: 1
+}
+
+.anim-mode-btn {
+	flex: 1;
+	padding: 7px 0;
+	font-size: 12px;
+	font-weight: 600;
+	color: #7a9a94;
+	background: #f0f7f4;
+	border: 1.5px solid transparent;
+	border-radius: 10px;
+	cursor: pointer;
+	transition: all .15s ease
+}
+
+.anim-mode-btn.active {
+	color: #45b8a0;
+	background: #e8f4ef;
+	border-color: #45b8a0
+}
+
+.anim-mode-btn:active {
+	transform: scale(.95)
+}
+
+.anim-color-row input[type="color"] {
+	width: 44px;
+	height: 30px;
+	border: 1.5px solid #e0ece7;
+	border-radius: 8px;
+	background: #fff;
+	cursor: pointer;
+	padding: 2px
+}
+
+.anim-color-row input[type="color"]::-webkit-color-swatch-wrapper {
+	padding: 0
+}
+
+.anim-color-row input[type="color"]::-webkit-color-swatch {
+	border: none;
+	border-radius: 5px
+}
+
+
+/* ===== V78：蛇身体融合修复 + 粒子圆角碰撞/纵深感/运动优化 ===== */
+
+/* ---------- Hero 卡片纵深感 ---------- */
+.hero-card {
+	box-shadow:
+		inset 0 2px 14px rgba(43, 74, 68, .05),
+		inset 0 -2px 8px rgba(43, 74, 68, .03),
+		inset 2px 0 8px rgba(43, 74, 68, .02),
+		inset -2px 0 8px rgba(43, 74, 68, .02),
+		0 4px 16px rgba(69, 184, 160, .1) !important;
+}
+
+/* 确保粒子 canvas 在卡片内正确裁剪圆角 */
+.hero-bg-animate {
+	border-radius: inherit;
+}
+
+
+/* ===== V79：粒子性能/HSL随机色/大小控制 + 卡片纵深 + 蛇像素间距 ===== */
+
+/* ---------- Hero 卡片背景纵深感 ---------- */
+.hero-card {
+	position: relative;
+	background: #e8f4ef;
+	box-shadow:
+		inset 0 3px 16px rgba(43, 74, 68, .06),
+		inset 0 -3px 10px rgba(43, 74, 68, .04),
+		inset 3px 0 10px rgba(43, 74, 68, .025),
+		inset -3px 0 10px rgba(43, 74, 68, .025),
+		inset 0 0 0 1px rgba(255, 255, 255, .5),
+		0 6px 20px rgba(69, 184, 160, .12) !important;
+}
+
+/* 卡片顶部高光层（纯色，非渐变） */
+.hero-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 12px;
+	right: 12px;
+	height: 40%;
+	background: rgba(255, 255, 255, .08);
+	border-radius: inherit;
+	pointer-events: none;
+	z-index: 0;
+}
+
+/* ---------- 粒子层级：确保在最下层，不遮挡信息 ---------- */
+.hero-bg-animate {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 0 !important;
+	border-radius: inherit;
+}
+
+#heroParticles {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 0 !important;
+	display: block;
+}
+
+/* 卡片内容强制在粒子之上 */
+.hero-card > *:not(.hero-bg-animate) {
+	position: relative;
+	z-index: 2 !important;
+}
+
+.hero-card .hero-top,
+.hero-card .budget-bar,
+.hero-card .hero-foot {
+	position: relative;
+	z-index: 2 !important;
+}
+
+
+/* ===== V80：盒子效果 + 粒子全随机 + 连线颜色修复 ===== */
+
+/* ---------- Hero 卡片盒子效果 ---------- */
+.hero-card {
+	position: relative;
+	background: #e8f4ef;
+	border-radius: 20px;
+	border-top: 2px solid rgba(255, 255, 255, .75);
+	border-left: 1px solid rgba(255, 255, 255, .4);
+	box-shadow:
+		/* 内部凹陷感 */
+		inset 0 3px 12px rgba(43, 74, 68, .07),
+		inset 0 -2px 6px rgba(255, 255, 255, .45),
+		inset 2px 0 6px rgba(43, 74, 68, .03),
+		inset -2px 0 6px rgba(43, 74, 68, .03),
+		/* 盒子底部厚度（深色底边） */
+		0 7px 0 rgba(69, 184, 160, .2),
+		0 12px 28px rgba(69, 184, 160, .22),
+		/* 盒子右侧厚度 */
+		4px 0 0 rgba(69, 184, 160, .1) !important;
+}
+
+/* 盒子顶部高光层 */
+.hero-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 14px;
+	right: 14px;
+	height: 45%;
+	background: rgba(255, 255, 255, .1);
+	border-radius: 20px 20px 50% 50% / 20px 20px 30% 30%;
+	pointer-events: none;
+	z-index: 0;
+}
+
+/* 粒子 canvas 在盒子内部最下层 */
+.hero-bg-animate {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+	z-index: 0 !important;
+	border-radius: inherit;
+}
+
+#heroParticles {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 0 !important;
+	display: block;
+}
+
+/* 卡片内容强制在最上层 */
+.hero-card > *:not(.hero-bg-animate) {
+	position: relative;
+	z-index: 2 !important;
+}
+
+
+/* ===== V81：粒子大小速度反比 + 只保留内部纵深感 ===== */
+
+/* ---------- Hero 卡片：移除外部投影，只保留内部纵深感 ---------- */
+.hero-card {
+	box-shadow:
+		inset 0 4px 14px rgba(43, 74, 68, .08),
+		inset 0 -2px 8px rgba(255, 255, 255, .5),
+		inset 3px 0 8px rgba(43, 74, 68, .035),
+		inset -3px 0 8px rgba(43, 74, 68, .035),
+		inset 0 0 0 1px rgba(255, 255, 255, .35) !important;
+	border-top: none;
+	border-left: none;
+}
+
+/* 顶部高光层保留（内部效果） */
+.hero-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 14px;
+	right: 14px;
+	height: 40%;
+	background: rgba(255, 255, 255, .08);
+	border-radius: 20px 20px 50% 50% / 20px 20px 30% 30%;
+	pointer-events: none;
+	z-index: 0;
+}
+
+
+/* ===== V82：小蛇轨迹 bug 修复 + 日期格子互动效果 ===== */
+
+/* 小蛇靠近时日期格子高亮 */
+.schedule-calendar-box .calendar .day.snake-hover,
+.schedule-calendar-box .calendar .blank.snake-hover {
+	background: rgba(69, 184, 160, 0.12) !important;
+	transform: scale(1.06);
+	box-shadow: 0 0 0 2px rgba(69, 184, 160, 0.35), inset 0 0 8px rgba(69, 184, 160, 0.1);
+	transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+	z-index: 2;
+	position: relative;
+}
+
+/* 有排班的格子被蛇靠近时，保持排班色但加高亮 */
+.schedule-calendar-box .calendar .day.shift.snake-hover {
+	background: rgba(69, 184, 160, 0.18) !important;
+	box-shadow: 0 0 0 2px rgba(69, 184, 160, 0.5), inset 0 0 10px rgba(69, 184, 160, 0.15);
+}
+
+/* 今天的格子被蛇靠近时 */
+.schedule-calendar-box .calendar .day.today.snake-hover {
+	box-shadow: 0 0 0 2px rgba(240, 184, 120, 0.6), inset 0 0 10px rgba(240, 184, 120, 0.2);
+}
+
+
+/* ===== V83：粒子 bug 修复 + 特殊粒子互动 + 小蛇互动效果改版（无边框） ===== */
+
+/* 小蛇靠近时日期格子：无边框，改用背景色+文字+缩放 */
+.schedule-calendar-box .calendar .day.snake-hover,
+.schedule-calendar-box .calendar .blank.snake-hover {
+	background: rgba(69, 184, 160, 0.18) !important;
+	transform: scale(1.05);
+	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+	z-index: 2;
+	position: relative;
+	box-shadow: none !important;
+}
+
+/* 格子内日期数字变深变粗 */
+.schedule-calendar-box .calendar .day.snake-hover .date-num,
+.schedule-calendar-box .calendar .day.snake-hover > span:first-child {
+	color: #2f8a74 !important;
+	font-weight: 700 !important;
+	transition: all 0.3s ease;
+}
+
+/* 有排班的格子被蛇靠近时 */
+.schedule-calendar-box .calendar .day.shift.snake-hover {
+	background: rgba(69, 184, 160, 0.25) !important;
+}
+
+/* 今天的格子被蛇靠近时 */
+.schedule-calendar-box .calendar .day.today.snake-hover {
+	background: rgba(240, 184, 120, 0.22) !important;
+}
+.schedule-calendar-box .calendar .day.today.snake-hover .date-num,
+.schedule-calendar-box .calendar .day.today.snake-hover > span:first-child {
+	color: #c48a4a !important;
+}
+
+
+/* ===== V84：粒子物理优化 + 小蛇格子倾斜互动 ===== */
+
+/* 清除之前 .snake-hover 的 transform（现在由方向动画控制） */
+.schedule-calendar-box .calendar .day.snake-hover,
+.schedule-calendar-box .calendar .blank.snake-hover {
+	background: rgba(69, 184, 160, 0.15) !important;
+	box-shadow: none !important;
+	transform-origin: center center;
+	will-change: transform;
+}
+
+/* 四个方向的倾斜呼吸动画 */
+.schedule-calendar-box .calendar .day.snake-tilt-left,
+.schedule-calendar-box .calendar .blank.snake-tilt-left {
+	animation: snake-tilt-left 2s ease-in-out infinite;
+}
+.schedule-calendar-box .calendar .day.snake-tilt-right,
+.schedule-calendar-box .calendar .blank.snake-tilt-right {
+	animation: snake-tilt-right 2s ease-in-out infinite;
+}
+.schedule-calendar-box .calendar .day.snake-tilt-up,
+.schedule-calendar-box .calendar .blank.snake-tilt-up {
+	animation: snake-tilt-up 2s ease-in-out infinite;
+}
+.schedule-calendar-box .calendar .day.snake-tilt-down,
+.schedule-calendar-box .calendar .blank.snake-tilt-down {
+	animation: snake-tilt-down 2s ease-in-out infinite;
+}
+
+@keyframes snake-tilt-left {
+	0%, 100% { transform: skewX(-2deg) scale(1.02); }
+	50% { transform: skewX(-5deg) scale(1.06); }
+}
+@keyframes snake-tilt-right {
+	0%, 100% { transform: skewX(2deg) scale(1.02); }
+	50% { transform: skewX(5deg) scale(1.06); }
+}
+@keyframes snake-tilt-up {
+	0%, 100% { transform: skewY(-2deg) scale(1.02); }
+	50% { transform: skewY(-5deg) scale(1.06); }
+}
+@keyframes snake-tilt-down {
+	0%, 100% { transform: skewY(2deg) scale(1.02); }
+	50% { transform: skewY(5deg) scale(1.06); }
+}
+
+/* 有排班的格子被蛇靠近时背景稍深 */
+.schedule-calendar-box .calendar .day.shift.snake-hover {
+	background: rgba(69, 184, 160, 0.22) !important;
+}
+
+/* 今天的格子被蛇靠近时暖杏色 */
+.schedule-calendar-box .calendar .day.today.snake-hover {
+	background: rgba(240, 184, 120, 0.2) !important;
+}
+

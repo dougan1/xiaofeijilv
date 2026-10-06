@@ -81,6 +81,7 @@
 			return defaultState()
 		}
 	})();
+	state.page = '消费';
 	state.schedule = Object.assign(defaultState().schedule, state.schedule || {});
 	state.schedule.overrides = state.schedule.overrides && typeof state.schedule.overrides === 'object' ? state
 		.schedule.overrides : {};
@@ -586,7 +587,7 @@
 			state.cloud.autoPull = true;
 			rawLocalSave();
 			await cloudTest(true);
-			m.remove()
+			closeModal(m)
 		};
 		m.querySelector('#cloudPullBtn').onclick = async () => {
 			state.cloud.binId = m.querySelector('#cloudBinId').value.trim();
@@ -594,7 +595,7 @@
 			state.cloud.autoSync = m.querySelector('#cloudAuto').checked;
 			state.cloud.autoPull = true;
 			rawLocalSave();
-			m.remove();
+			closeModal(m);
 			await cloudPull(true, false)
 		};
 		m.querySelector('#cloudSaveBtn').onclick = async () => {
@@ -604,8 +605,9 @@
 			state.cloud.autoPull = true;
 			state.cloud.status = '自动连接已开启';
 			rawLocalSave();
-			m.remove();
-			render();
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});;
 			await cloudAutoConnect()
 		}
 	}
@@ -696,8 +698,9 @@
 			const over = expected != null && amount > expected + 0.005;
 			const status = over ? ' over' : (hasSpend ? ' spent' : (pastZero ? ' past-zero' : ' no-spend'));
 			const face = hasSpend ? (over ? '😣' : '😊') : '🥺';
+			const faceClass = over ? 'day-face face-wobble' : 'day-face';
 			html +=
-				`<button class="day expense-day${status}${sel}${today}" data-date="${d}"><div class="day-top"><b>${dateText(d)}</b></div><div class="day-face">${face}</div><strong class="day-actual">${moneyCal(amount)}</strong></button>`;
+				`<button class="day expense-day${status}${sel}${today}" data-date="${d}"><div class="day-top"><b>${dateText(d)}</b></div><div class="${faceClass}">${face}</div><strong class="day-actual">${moneyCal(amount)}</strong></button>`;
 		}
 		return html;
 	}
@@ -784,8 +787,11 @@
 		const [h, m] = end.split(':').map(Number);
 		const cur = dateObj.getHours() * 60 + dateObj.getMinutes();
 		const endMin = h * 60 + m;
-		if (sh === '夜班' && state.schedule.nightEnd < state.schedule.nightStart) return cur >= endMin && cur <
-			1440 && cur >= 0 && cur < h * 60 + 60 * 24;
+		if (sh === '夜班' && state.schedule.nightEnd < state.schedule.nightStart) {
+			// 跨天夜班（如20:00→次日08:00）：当天08:00-20:00是待上班时段，
+			// 夜班结束是次日，当天不存在"已下班"状态，应显示夜班动画
+			return false;
+		}
 		return cur >= endMin;
 	}
 
@@ -826,6 +832,7 @@
 		categoryModal()
 	}
 
+	var __lastBalance = null;
 	function render() {
 		let body = '';
 		if (state.tab === '消费') body = renderConsume();
@@ -834,7 +841,14 @@
 		else if (state.tab === '设置') body = renderSettings();
 		else body = renderConsume();
 		document.getElementById('app').innerHTML = body + nav();
-		bind()
+		bind();
+		if (state.tab === '消费') {
+			var curBal = remaining();
+			if (__lastBalance !== null && curBal !== __lastBalance) {
+				window.dispatchEvent(new CustomEvent('balanceChanged'));
+			}
+			__lastBalance = curBal;
+		}
 	}
 
 	function renderConsume() {
@@ -846,7 +860,7 @@
 			displayOver = displayExpected != null && displayActual > displayExpected + 0.005;
 		const barClass = pct > 50 ? 'green' : pct > 20 ? 'yellow' : 'red';
 		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="consumeSettings">⚙</button></div>
-<section class="hero-card"><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>本周期 ${periodDates().length} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
+<section class="hero-card"><div class="hero-bg-animate" aria-hidden="true"></div><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>剩余 ${futureDays()} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
 	<div class="stats"><button class="stat-card" id="periodBudgetCard"><small>周期可使用</small><b>${money(cycleBudget())}</b><span>点击修改金额</span></button><button class="stat-card daily-card"><small>每日消费 · ${dateText(displayDate)}</small><div class="daily-values"><div><em>预计</em><b>${displayExpected==null?'—':money(displayExpected)}</b></div><div class="daily-divider"></div><div class="${displayOver?'danger-text':''}"><em>实际</em><b>${money(displayActual)}</b></div></div></button><button class="stat-card actual-card"><div class="actual-head"><small>实际消费</small><span>${state.records.filter(r=>periodDates().includes(r.date)).length} 笔</span></div><b>${money(periodSpent())}</b><em>当前周期累计</em></button></div>
 <section class="card calendar-card"><div class="section-head">${cycleNav('消费周期')}</div><div class="calendar">${daysGrid()}</div></section>
 <section class="card"><div class="section-head"><div><h2>${state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细'}</h2><small>${state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序'}</small></div></div>${recordList()}</section><button class="fab" id="addExpense">＋</button></main>`
@@ -897,7 +911,13 @@
 	}
 
 	function renderSettings() {
-		return `<main class="page-main settings-page"><div class="page-topbar"><div class="page-period">应用设置</div></div><section class="setting-group"><div class="group-title">常用设置</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类，可自定义</small></div><em>›</em></button><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode==='normal'?'正常模式':'倒班模式'} · ${state.schedule.startDate}</small></div><em>›</em></button><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云端数据库</b><small>${escapeHtml(state.cloud?.status||'未连接')} · ${state.cloud?.autoSync===false?'手动同步':'自动同步'}</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">应用信息</div><div class="setting-item version-item"><span class="setting-icon">ℹ️</span><div><b>版本号</b><small>${APP_VERSION}</small></div><em></em></div></section><section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openReset"><span class="setting-icon">♻️</span><div><b class="danger-text">恢复默认数据</b><small>清除本机消费、排班和工具记录</small></div><em>›</em></button></section><div class="settings-tip">周期、金额等高频设置已保留在对应页面右上角，避免重复。</div></main>`
+		let anim = {};
+		try { anim = JSON.parse(localStorage.getItem('animSettings') || '{}'); } catch(e) {}
+		const sSpeed = anim.snake?.speed ?? 1.2;
+		const sMaxLen = anim.snake?.maxLength ?? 20;
+		const sColor = anim.snake?.color ?? '#45b8a0';
+
+		return `<main class="page-main settings-page"><div class="page-topbar"><div class="page-period">应用设置</div></div><section class="setting-group"><div class="group-title">常用设置</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类，可自定义</small></div><em>›</em></button><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode==='normal'?'正常模式':'倒班模式'} · ${state.schedule.startDate}</small></div><em>›</em></button><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云端数据库</b><small>${escapeHtml(state.cloud?.status||'未连接')} · ${state.cloud?.autoSync===false?'手动同步':'自动同步'}</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">动画与特效</div><div class="anim-setting-card"><div class="anim-setting-title">🐍 日历小蛇</div><div class="anim-slider-row"><label>移动速度</label><input type="range" id="sSpeed" min="0.5" max="4" step="0.1" value="${sSpeed}"><span class="anim-val" id="sSpeedVal">${sSpeed}</span></div><div class="anim-slider-row"><label>最大长度</label><input type="range" id="sMaxLen" min="3" max="30" step="1" value="${sMaxLen}"><span class="anim-val" id="sMaxLenVal">${sMaxLen}</span></div><div class="anim-color-row"><label>蛇身颜色</label><input type="color" id="sColor" value="${sColor}"></div></div></section><section class="setting-group"><div class="group-title">应用信息</div><div class="setting-item version-item"><span class="setting-icon">ℹ️</span><div><b>版本号</b><small>${APP_VERSION}</small></div><em></em></div></section><section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openReset"><span class="setting-icon">♻️</span><div><b class="danger-text">恢复默认数据</b><small>清除本机消费、排班和工具记录</small></div><em>›</em></button></section><div class="settings-tip">周期、金额等高频设置已保留在对应页面右上角，避免重复。</div></main>`
 	}
 
 	function consumeSettingsModal() {
@@ -905,19 +925,23 @@
 			`<button class="setting-item" id="mPeriod"><span class="setting-icon">📅</span><div><b>消费周期</b><small>${state.consumeStart} 至 ${state.consumeEnd}</small></div><em>›</em></button><button class="setting-item" id="mBudget"><span class="setting-icon">💰</span><div><b>周期可使用</b><small>${money(cycleBudget())}</small></div><em>›</em></button><button class="setting-item" id="mCategory"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类</small></div><em>›</em></button>`
 			);
 		m.querySelector('#mPeriod').onclick = () => {
-			m.remove();
+			closeModal(m);
 			periodModal()
 		};
 		m.querySelector('#mBudget').onclick = () => {
-			m.remove();
+			closeModal(m);
 			budgetModal()
 		};
 		m.querySelector('#mCategory').onclick = () => {
-			m.remove();
+			closeModal(m);
 			categoryModal()
 		}
 	}
 
+	function closeModal(el) {
+		el.classList.add('closing');
+		setTimeout(() => el.remove(), 220);
+	}
 	function modal(title, content, buttons = '', options = {}) {
 		const el = document.createElement('div');
 		el.className = 'modal-mask';
@@ -935,7 +959,7 @@
 			`<div class="modal"><div class="modal-head"><h3>${title}</h3><button class="close" data-close>×</button></div><div class="modal-body">${content}</div>${buttons?`<div class="modal-actions">${buttons}</div>`:''}</div>`;
 		document.body.appendChild(el);
 		el.addEventListener('click', e => {
-			if (e.target.matches('.modal-mask,[data-close]')) el.remove()
+			if (e.target.matches('.modal-mask,[data-close]')) closeModal(el)
 		});
 		return el
 	}
@@ -970,8 +994,9 @@
 				recalcAllocationsFromCycle()
 			}
 			save();
-			m.remove();
-			render()
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
 
@@ -997,8 +1022,9 @@
 			state.budget = Number(state.cycleBudgets[k] || 0);
 			state.selectedDate = '';
 			save();
-			m.remove();
-			render()
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
 
@@ -1187,19 +1213,58 @@
 			category: state.categories[0] || '其他'
 		};
 		const m = modal(id ? '编辑消费' : '添加消费',
-			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="number" min="0" step="0.01" value="${r.amount}" placeholder="请输入金额"></label><label>分类<select id="eCat">${state.categories.map(c=>`<option ${c===r.category?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></label></div><label class="expense-date-row">日期<input id="eDate" type="date" value="${r.date}"></label>`,
+			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r.amount}" placeholder="请输入金额"></label><label>分类<select id="eCat">${state.categories.map(c=>`<option ${c===r.category?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></label></div><label class="expense-date-row">日期<div class="date-input-wrap"><input id="eDate" type="date" value="${r.date}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">完成</button></div></div>`,
 			`<button class="secondary" data-close>取消</button>${id?'<button class="danger" id="deleteExpense">删除</button>':''}<button class="primary" id="saveExpense">保存</button>`,
 			id ? {} : {
 				originEl
 			}
 			);
 		const num = m.querySelector('#eAmount');
+		const keypad = m.querySelector('#customKeypad');
+		if (keypad) {
+			const kpDisplay = m.querySelector('#keypadDisplay');
+			const updateKpDisplay = () => { if (kpDisplay) kpDisplay.textContent = num.value || '0'; };
+			num.addEventListener('click', () => { keypad.classList.add('show'); updateKpDisplay(); });
+			keypad.addEventListener('click', (ev) => {
+				const btn = ev.target.closest('[data-key]');
+				if (!btn) return;
+				const key = btn.dataset.key;
+				let val = num.value || '';
+				if (key === 'back') { val = val.slice(0, -1); }
+				else if (key === 'done') { keypad.classList.remove('show'); return; }
+				else if (key === '.') { if (!val.includes('.')) val += '.'; }
+				else {
+					if (val.includes('.')) { const parts = val.split('.'); if (parts[1].length < 2) val += key; }
+					else { if (val.length < 8) val += key; }
+				}
+				num.value = val;
+				updateKpDisplay();
+			});
+			
+// 今日按钮
+			const todayBtn = m.querySelector('#eDateToday');
+			if (todayBtn) {
+				todayBtn.addEventListener('click', () => {
+					m.querySelector('#eDate').value = todayISO();
+					todayBtn.textContent = '已选今日';
+					setTimeout(() => todayBtn.textContent = '今日', 1200);
+				});
+			}
+			setTimeout(() => {
+				document.addEventListener('click', function closeKp(ev) {
+				if (!ev.target.closest('#customKeypad') && !ev.target.closest('#eAmount')) {
+						keypad.classList.remove('show');
+					}
+				});
+			}, 100);
+		}
 		if (id) m.querySelector('#deleteExpense').onclick = () => {
 			if (confirm('确定删除这笔消费？')) {
 				state.records = state.records.filter(x => x.id !== id);
 				save();
-				m.remove();
-				render()
+				closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 			}
 		};
 		m.querySelector('#saveExpense').onclick = () => {
@@ -1220,8 +1285,9 @@
 				recalcAfterConsumption(oldDate);
 				if (date !== oldDate) recalcAfterConsumption(date);
 				save();
-				m.remove();
-				render();
+				closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});;
 				return;
 			}
 			const beforeRemaining = remaining();
@@ -1229,7 +1295,7 @@
 			recalcAfterConsumption(date);
 			save();
 			const afterRemaining = remaining();
-			m.remove();
+			closeModal(m);
 			requestAnimationFrame(() => playExpenseAddEffect(obj.id, amount, beforeRemaining, afterRemaining,
 			() => {
 					render();
@@ -1264,8 +1330,9 @@
 			s.nightStart = m.querySelector('#nightStart').value;
 			s.nightEnd = m.querySelector('#nightEnd').value;
 			save();
-			m.remove();
-			render()
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
 
@@ -1290,8 +1357,9 @@
 				icon
 			});
 			save();
-			m.remove();
-			render()
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
 
@@ -1304,14 +1372,16 @@
 		m.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
 			state.schedule.overrides[date] = b.dataset.pick;
 			save();
-			m.remove();
-			render()
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 		});
 		m.querySelector('#autoShift').onclick = () => {
 			delete state.schedule.overrides[date];
 			save();
-			m.remove();
-			render()
+			closeModal(m);
+					trender();
+					window.scrollTo({top:0, behavior:'smooth'});
 		}
 	}
 
@@ -1393,6 +1463,31 @@
 				render()
 			}
 		});
+
+			// ===== 动画设置 =====
+			function saveAnimSettings(updates) {
+				let anim = {};
+				try { anim = JSON.parse(localStorage.getItem('animSettings') || '{}'); } catch(e) {}
+				if (updates.particles) anim.particles = Object.assign(anim.particles || {}, updates.particles);
+				if (updates.snake) anim.snake = Object.assign(anim.snake || {}, updates.snake);
+				localStorage.setItem('animSettings', JSON.stringify(anim));
+				window.dispatchEvent(new CustomEvent('animSettingsChanged'));
+			}
+						document.getElementById('sSpeed')?.addEventListener('input', function(e) {
+				var v = parseFloat(e.target.value);
+				var el = document.getElementById('sSpeedVal');
+				if (el) el.textContent = v.toFixed(1);
+				saveAnimSettings({ snake: { speed: v } });
+			});
+			document.getElementById('sMaxLen')?.addEventListener('input', function(e) {
+				var v = parseInt(e.target.value);
+				var el = document.getElementById('sMaxLenVal');
+				if (el) el.textContent = v;
+				saveAnimSettings({ snake: { maxLength: v } });
+			});
+			document.getElementById('sColor')?.addEventListener('input', function(e) {
+				saveAnimSettings({ snake: { color: e.target.value } });
+			});
 	}
 	render();
 	setTimeout(() => {
