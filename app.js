@@ -1239,7 +1239,12 @@
 			const showKeypad = () => {
 					keypad.classList.remove('closing');
 					keypad.classList.add('show');
+					window.__scrollY = window.scrollY;
+					document.documentElement.style.overflow = 'hidden';
 					document.body.style.overflow = 'hidden';
+					document.body.style.position = 'fixed';
+					document.body.style.width = '100%';
+					document.body.style.top = '-' + window.__scrollY + 'px';
 					updateKpDisplay();
 					m.querySelector('#keypadPanel').style.display = 'block';
 					m.querySelector('#catPanel').style.display = 'none';
@@ -1247,12 +1252,17 @@
 				};
 				const hideKeypad = () => {
 					keypad.classList.add('closing');
+					document.documentElement.style.overflow = '';
 					document.body.style.overflow = '';
+					document.body.style.position = '';
+					document.body.style.width = '';
+					document.body.style.top = '';
+					if (window.__scrollY != null) window.scrollTo(0, window.__scrollY);
 					setTimeout(() => {
 						keypad.classList.remove('show', 'closing');
 					}, 220);
 				};
-				num.addEventListener('click', (e) => { e.preventDefault(); showKeypad(); });
+				num.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); num.blur(); showKeypad(); });
 			keypad.addEventListener('click', (ev) => {
 				const btn = ev.target.closest('[data-key]');
 				if (!btn) return;
