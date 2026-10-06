@@ -10167,3 +10167,15 @@ nav button.on i {
 	text-overflow: ellipsis !important;
 	max-width: 100% !important;
 }
+
+/* ===== V101：小键盘连续输入优化 + 删除消费不回顶部 ===== */
+.keypad-grid button {
+	touch-action: manipulation !important;
+	transition: background .08s ease !important;
+}
+.keypad-grid button:active {
+	transform: none !important;
+}
+.keypad-grid .key-done:active {
+	transform: none !important;
+}

@@ -102,7 +102,7 @@
 	state.cloud.accessKey = '$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 	state.cloud.autoSync = true;
 	state.cloud.autoPull = true;
-	const APP_VERSION = 'V100';
+	const APP_VERSION = 'V101';
 	const oldDefaultCategories = ['餐饮', '交通', '购物', '娱乐', '生活', '其他'];
 	if (!Array.isArray(state.categories) || !state.categories.length || state.categories.length ===
 		oldDefaultCategories.length && state.categories.every(x => oldDefaultCategories.includes(x))) state
@@ -1500,7 +1500,8 @@
 			state.records = state.records.filter(x => x.id !== id);
 			recalcAfterConsumption(old.date);
 			save();
-			setTimeout(render, 220)
+			const _scrollY = window.scrollY;
+				setTimeout(() => { render(); window.scrollTo(0, _scrollY); }, 220)
 		});
 		document.getElementById('scheduleSettings')?.addEventListener('click', scheduleModal);
 		document.getElementById('scheduleCalendarLock')?.addEventListener('click', () => {
