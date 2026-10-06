@@ -1225,7 +1225,7 @@
 			category: state.categories[0] || '其他'
 		};
 		const m = modal(id ? '编辑消费' : '添加消费',
-			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r.amount}" placeholder="请输入金额"></label><label>分类<input id="eCat" type="text" readonly class="cat-input" value="${escapeHtml(r.category||'')}" placeholder="请选择分类"></label></div><label class="expense-date-row">日期<div class="date-row"><input id="eDate" type="date" value="${r.date}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-step-title" id="keypadStepTitle">输入金额</div><div class="keypad-panel" id="keypadPanel"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">下一步</button></div></div><div class="cat-panel" id="catPanel" style="display:none"><div class="cat-panel-head"><button type="button" class="cat-back" id="catBack">← 返回</button><span>选择分类</span></div><div class="cat-grid">${state.categories.map(cat=>`<button type="button" class="cat-item" data-cat="${escapeHtml(cat)}">${categoryIcon(cat)} ${escapeHtml(cat)}</button>`).join('')}</div></div></div>`,
+			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r.amount}" placeholder="请输入金额"></label><label>分类<input id="eCat" type="text" readonly class="cat-input" value="${escapeHtml(r.category||'')}" placeholder="请选择分类"></label></div><label class="expense-date-row">日期<div class="date-row"><input id="eDate" type="date" value="${r.date}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-step-title" id="keypadStepTitle">输入金额</div><div class="keypad-panel" id="keypadPanel"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">下一步</button></div></div><div class="cat-panel" id="catPanel" style="display:none"><div class="cat-panel-head"><button type="button" class="cat-back" id="catBack">← 返回</button></div><div class="cat-grid">${state.categories.map(cat=>`<button type="button" class="cat-item" data-cat="${escapeHtml(cat)}">${categoryIcon(cat)} ${escapeHtml(cat)}</button>`).join('')}</div></div></div>`,
 			`<button class="secondary" data-close>取消</button>${id?'<button class="danger" id="deleteExpense">删除</button>':''}<button class="primary" id="saveExpense">保存</button>`,
 			id ? {} : {
 				originEl
@@ -1239,6 +1239,7 @@
 			const showKeypad = () => {
 					keypad.classList.remove('closing');
 					keypad.classList.add('show');
+					document.body.style.overflow = 'hidden';
 					updateKpDisplay();
 					m.querySelector('#keypadPanel').style.display = 'block';
 					m.querySelector('#catPanel').style.display = 'none';
@@ -1246,11 +1247,12 @@
 				};
 				const hideKeypad = () => {
 					keypad.classList.add('closing');
+					document.body.style.overflow = '';
 					setTimeout(() => {
 						keypad.classList.remove('show', 'closing');
 					}, 220);
 				};
-				num.addEventListener('click', showKeypad);
+				num.addEventListener('click', (e) => { e.preventDefault(); showKeypad(); });
 			keypad.addEventListener('click', (ev) => {
 				const btn = ev.target.closest('[data-key]');
 				if (!btn) return;

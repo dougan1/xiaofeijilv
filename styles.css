@@ -10139,3 +10139,16 @@ nav button.on i {
 	color: #fff !important;
 	border-color: #45b8a0 !important;
 }
+
+/* ===== V94：分类面板头部调整（去掉重复标题后） ===== */
+.cat-panel-head {
+	justify-content: flex-start !important;
+	margin-bottom: 10px !important;
+	min-height: 28px;
+}
+.cat-back {
+	position: static !important;
+	transform: none !important;
+	top: auto !important;
+	left: auto !important;
+}
