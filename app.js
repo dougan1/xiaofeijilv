@@ -833,6 +833,17 @@
 	}
 
 	var __lastBalance = null;
+	function updateNavIndicator() {
+		const navEl = document.querySelector('nav');
+		const indicator = navEl?.querySelector('.nav-indicator');
+		const active = navEl?.querySelector('button.on');
+		if (navEl && indicator && active) {
+			requestAnimationFrame(() => {
+				indicator.style.left = active.offsetLeft + 'px';
+				indicator.style.width = active.offsetWidth + 'px';
+			});
+		}
+	}
 	function render() {
 		let body = '';
 		if (state.tab === '消费') body = renderConsume();
@@ -842,6 +853,7 @@
 		else body = renderConsume();
 		document.getElementById('app').innerHTML = body + nav();
 		bind();
+		updateNavIndicator();
 		if (state.tab === '消费') {
 			var curBal = remaining();
 			if (__lastBalance !== null && curBal !== __lastBalance) {
@@ -1213,7 +1225,7 @@
 			category: state.categories[0] || '其他'
 		};
 		const m = modal(id ? '编辑消费' : '添加消费',
-			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r.amount}" placeholder="请输入金额"></label><label>分类<select id="eCat">${state.categories.map(c=>`<option ${c===r.category?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></label></div><label class="expense-date-row">日期<div class="date-input-wrap"><input id="eDate" type="date" value="${r.date}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">完成</button></div></div>`,
+			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r.amount}" placeholder="请输入金额"></label><label>分类<input id="eCat" type="text" readonly class="cat-input" value="${escapeHtml(r.category||'')}" placeholder="请选择分类"></label></div><label class="expense-date-row">日期<div class="date-row"><input id="eDate" type="date" value="${r.date}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-step-title" id="keypadStepTitle">输入金额</div><div class="keypad-panel" id="keypadPanel"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">下一步</button></div></div><div class="cat-panel" id="catPanel" style="display:none"><div class="cat-panel-head"><button type="button" class="cat-back" id="catBack">← 返回</button><span>选择分类</span></div><div class="cat-grid">${state.categories.map(cat=>`<button type="button" class="cat-item" data-cat="${escapeHtml(cat)}">${categoryIcon(cat)} ${escapeHtml(cat)}</button>`).join('')}</div></div></div>`,
 			`<button class="secondary" data-close>取消</button>${id?'<button class="danger" id="deleteExpense">删除</button>':''}<button class="primary" id="saveExpense">保存</button>`,
 			id ? {} : {
 				originEl
@@ -1224,14 +1236,37 @@
 		if (keypad) {
 			const kpDisplay = m.querySelector('#keypadDisplay');
 			const updateKpDisplay = () => { if (kpDisplay) kpDisplay.textContent = num.value || '0'; };
-			num.addEventListener('click', () => { keypad.classList.add('show'); updateKpDisplay(); });
+			const showKeypad = () => {
+					keypad.classList.remove('closing');
+					keypad.classList.add('show');
+					updateKpDisplay();
+					m.querySelector('#keypadPanel').style.display = 'block';
+					m.querySelector('#catPanel').style.display = 'none';
+					m.querySelector('#keypadStepTitle').textContent = '输入金额';
+				};
+				const hideKeypad = () => {
+					keypad.classList.add('closing');
+					setTimeout(() => {
+						keypad.classList.remove('show', 'closing');
+					}, 220);
+				};
+				num.addEventListener('click', showKeypad);
 			keypad.addEventListener('click', (ev) => {
 				const btn = ev.target.closest('[data-key]');
 				if (!btn) return;
 				const key = btn.dataset.key;
 				let val = num.value || '';
 				if (key === 'back') { val = val.slice(0, -1); }
-				else if (key === 'done') { keypad.classList.remove('show'); return; }
+				else if (key === 'done') {
+					m.querySelector('#keypadPanel').style.display = 'none';
+					var cp = m.querySelector('#catPanel');
+					cp.style.display = 'block';
+					cp.classList.remove('panel-in');
+					void cp.offsetWidth;
+					cp.classList.add('panel-in');
+					m.querySelector('#keypadStepTitle').textContent = '选择分类';
+					return;
+				}
 				else if (key === '.') { if (!val.includes('.')) val += '.'; }
 				else {
 					if (val.includes('.')) { const parts = val.split('.'); if (parts[1].length < 2) val += key; }
@@ -1243,20 +1278,61 @@
 			
 // 今日按钮
 			const todayBtn = m.querySelector('#eDateToday');
-			if (todayBtn) {
+			const dateInput = m.querySelector('#eDate');
+			if (todayBtn && dateInput) {
+				const updateTodayBtn = () => {
+					if (dateInput.value === todayISO()) {
+						todayBtn.textContent = '已选今日';
+						todayBtn.classList.add('on');
+						todayBtn.style.display = '';
+					} else {
+						todayBtn.style.display = 'none';
+					}
+				};
 				todayBtn.addEventListener('click', () => {
-					m.querySelector('#eDate').value = todayISO();
-					todayBtn.textContent = '已选今日';
-					setTimeout(() => todayBtn.textContent = '今日', 1200);
+					dateInput.value = todayISO();
+					updateTodayBtn();
 				});
+				dateInput.addEventListener('change', updateTodayBtn);
+				updateTodayBtn();
 			}
 			setTimeout(() => {
 				document.addEventListener('click', function closeKp(ev) {
-				if (!ev.target.closest('#customKeypad') && !ev.target.closest('#eAmount')) {
-						keypad.classList.remove('show');
+				if (!ev.target.closest('#customKeypad') && !ev.target.closest('#eAmount') ) {
+						hideKeypad();
 					}
 				});
 			}, 100);
+
+		// 分类面板逻辑（合并在小键盘弹窗内）
+		const catInput = m.querySelector('#eCat');
+		const catPanel2 = m.querySelector('#catPanel');
+		if (catPanel2) {
+			catPanel2.addEventListener('click', (ev) => {
+				const btn = ev.target.closest('.cat-item');
+				if (!btn) return;
+				catInput.value = btn.dataset.cat;
+				hideKeypad();
+				// 关闭后重置面板状态
+				setTimeout(() => {
+						m.querySelector('#keypadPanel').style.display = 'block';
+						m.querySelector('#catPanel').style.display = 'none';
+						m.querySelector('#keypadStepTitle').textContent = '输入金额';
+					}, 250);
+			});
+			const backBtn = m.querySelector('#catBack');
+			if (backBtn) {
+				backBtn.addEventListener('click', () => {
+					m.querySelector('#catPanel').style.display = 'none';
+					var kp = m.querySelector('#keypadPanel');
+					kp.style.display = 'block';
+					kp.classList.remove('panel-in');
+					void kp.offsetWidth;
+					kp.classList.add('panel-in');
+					m.querySelector('#keypadStepTitle').textContent = '输入金额';
+				});
+			}
+		}
 		}
 		if (id) m.querySelector('#deleteExpense').onclick = () => {
 			if (confirm('确定删除这笔消费？')) {
@@ -1270,7 +1346,7 @@
 		m.querySelector('#saveExpense').onclick = () => {
 			const amount = Number(num.value),
 				date = m.querySelector('#eDate').value;
-			if (!date || !Number.isFinite(amount) || amount < 0) return alert('请填写正确的日期和金额');
+			if (!date || !Number.isFinite(amount) || amount <= 0) return alert('请填写正确的日期和金额（金额需大于0）');
 			const obj = {
 				id: id || Date.now().toString(),
 				name: m.querySelector('#eName').value.trim(),

@@ -9715,3 +9715,427 @@ nav button.on {
 	background: rgba(240, 184, 120, 0.2) !important;
 }
 
+
+/* ===== V82：小键盘原地展开（不再从底部弹出） ===== */
+.custom-keypad {
+	display: none !important;
+	position: static !important;
+	bottom: auto !important;
+	left: auto !important;
+	right: auto !important;
+	background: #f7fbf9 !important;
+	border-radius: 14px !important;
+	box-shadow: none !important;
+	padding: 12px !important;
+	margin-top: 14px;
+	border: 1px solid #e0ece6;
+	z-index: auto !important;
+}
+.custom-keypad.show {
+	display: block !important;
+	animation: keypadExpand .25s ease !important;
+}
+@keyframes keypadExpand {
+	from { opacity: 0; transform: translateY(-6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+/* 取消给底部弹出键盘留的空间 */
+.modal-add-consume .modal-body {
+	padding-bottom: 0 !important;
+}
+/* 小键盘在弹窗内时调整 grid 最大宽度 */
+.keypad-grid {
+	max-width: 100% !important;
+}
+.keypad-display {
+	font-size: 24px !important;
+	padding: 4px 0 10px !important;
+	margin-bottom: 10px !important;
+}
+.keypad-grid button {
+	height: 46px !important;
+	font-size: 20px !important;
+}
+.keypad-grid .key-done {
+	height: 42px !important;
+}
+
+/* ===== V83：小键盘改为独立居中弹窗 + 遮罩 ===== */
+.keypad-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(43, 74, 68, 0.45);
+	z-index: 2999;
+	opacity: 0;
+	transition: opacity .22s ease;
+	pointer-events: none;
+}
+.keypad-overlay.show {
+	opacity: 1;
+	pointer-events: auto;
+}
+.custom-keypad {
+	display: none !important;
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	width: 300px !important;
+	max-width: 86vw !important;
+	bottom: auto !important;
+	right: auto !important;
+	background: #ffffff !important;
+	border-radius: 20px !important;
+	box-shadow: 0 16px 48px rgba(43, 74, 68, .25) !important;
+	padding: 18px 16px 16px !important;
+	margin-top: 0 !important;
+	border: none !important;
+	z-index: 3000 !important;
+}
+.custom-keypad.show {
+	display: block !important;
+	animation: keypadPop .26s cubic-bezier(.22, 1, .36, 1) !important;
+}
+@keyframes keypadPop {
+	from { opacity: 0; transform: translate(-50%, -50%) scale(.88); }
+	to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.keypad-display {
+	font-size: 30px !important;
+	font-weight: 700 !important;
+	color: #2b4a44 !important;
+	text-align: center !important;
+	padding: 4px 0 14px !important;
+	margin-bottom: 12px !important;
+	border-bottom: 1.5px solid #e8f0ec !important;
+	min-height: 42px !important;
+	letter-spacing: 1px !important;
+}
+.keypad-grid {
+	max-width: 100% !important;
+	gap: 10px !important;
+}
+.keypad-grid button {
+	height: 50px !important;
+	font-size: 22px !important;
+	border-radius: 14px !important;
+}
+.keypad-grid .key-done {
+	height: 46px !important;
+	font-size: 17px !important;
+}
+
+/* ===== V84：分类选择弹窗 + 今日按钮位置修复 ===== */
+/* ---------- 分类选择弹窗（和金额小键盘同款居中弹窗） ---------- */
+.cat-picker {
+	display: none;
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 300px;
+	max-width: 86vw;
+	background: #ffffff;
+	border-radius: 20px;
+	box-shadow: 0 16px 48px rgba(43, 74, 68, .25);
+	padding: 18px 16px 16px;
+	z-index: 3000;
+}
+.cat-picker.show {
+	display: block;
+	animation: keypadPop .26s cubic-bezier(.22, 1, .36, 1);
+}
+.picker-title {
+	text-align: center;
+	font-size: 16px;
+	font-weight: 600;
+	color: #2b4a44;
+	margin-bottom: 14px;
+	padding-bottom: 10px;
+	border-bottom: 1.5px solid #e8f0ec;
+}
+.cat-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+	max-height: 52vh;
+	overflow-y: auto;
+}
+.cat-item {
+	padding: 14px 6px;
+	border: 1px solid #e0ece6;
+	border-radius: 12px;
+	background: #f7fbf9;
+	color: #2b4a44;
+	font-size: 13px;
+	cursor: pointer;
+	transition: all .15s ease;
+	text-align: center;
+	word-break: break-all;
+	line-height: 1.3;
+}
+.cat-item:active {
+	background: #45b8a0;
+	color: #fff;
+	border-color: #45b8a0;
+	transform: scale(.93);
+}
+/* 分类输入框样式 */
+.cat-input {
+	cursor: pointer !important;
+	background: #f7fbf9 !important;
+}
+
+/* ---------- 今日按钮：输入框外并排，修复位置乱 ---------- */
+.expense-date-row {
+	display: flex !important;
+	align-items: center !important;
+	flex-wrap: nowrap !important;
+	gap: 0 !important;
+}
+.date-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex: 1;
+	min-width: 0;
+}
+.date-row input {
+	flex: 1;
+	min-width: 0;
+	padding-right: 10px !important;
+}
+.today-btn {
+	position: static !important;
+	transform: none !important;
+	flex-shrink: 0;
+	margin: 0 !important;
+	padding: 8px 14px !important;
+	font-size: 13px !important;
+	white-space: nowrap;
+}
+.today-btn:active {
+	transform: scale(.92) !important;
+}
+/* 旧的 date-input-wrap 不再使用 */
+.date-input-wrap {
+	display: none !important;
+}
+
+/* ===== V85：金额+分类合并弹窗，分步切换 ===== */
+.keypad-step-title {
+	text-align: center;
+	font-size: 15px;
+	font-weight: 600;
+	color: #2b4a44;
+	padding: 2px 0 12px;
+	margin-bottom: 10px;
+	border-bottom: 1.5px solid #e8f0ec;
+	letter-spacing: 1px;
+}
+.cat-panel {
+	width: 100%;
+}
+.cat-panel-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 12px;
+}
+.cat-panel-head span {
+	font-size: 14px;
+	font-weight: 600;
+	color: #2b4a44;
+	flex: 1;
+	text-align: center;
+	margin-right: 48px; /* 给返回按钮留空间，保持标题居中 */
+}
+.cat-back {
+	background: none;
+	border: none;
+	color: #45b8a0;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: 8px;
+	transition: background .15s;
+	position: absolute;
+	left: 16px;
+}
+.cat-back:active {
+	background: #e8f4ef;
+}
+.cat-panel .cat-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 9px;
+	max-height: 220px;
+	overflow-y: auto;
+}
+.cat-panel .cat-item {
+	padding: 12px 4px;
+	border: 1px solid #e0ece6;
+	border-radius: 10px;
+	background: #f7fbf9;
+	color: #2b4a44;
+	font-size: 12px;
+	cursor: pointer;
+	transition: all .15s ease;
+	text-align: center;
+	word-break: break-all;
+	line-height: 1.3;
+}
+.cat-panel .cat-item:active {
+	background: #45b8a0;
+	color: #fff;
+	border-color: #45b8a0;
+	transform: scale(.93);
+}
+/* 确保弹窗内面板切换时大小稳定 */
+.custom-keypad {
+	min-height: 280px;
+}
+/* 隐藏旧的独立分类弹窗样式（不再使用） */
+.cat-picker {
+	display: none !important;
+}
+
+/* ===== V86：日期上下排布 + 弹窗大小一致 ===== */
+.expense-date-row {
+	display: flex !important;
+	flex-direction: column !important;
+	align-items: stretch !important;
+	gap: 6px !important;
+}
+.expense-date-row > div,
+.expense-date-row .date-row {
+	width: 100%;
+}
+/* 确保金额面板和分类面板弹窗大小一致 */
+.custom-keypad {
+	min-height: 300px !important;
+}
+.custom-keypad.show {
+	display: flex !important;
+	flex-direction: column !important;
+}
+.keypad-panel,
+.cat-panel {
+	display: block;
+}
+
+
+/* ===== V88：撤销动效，恢复简单切换 ===== */
+.custom-keypad {
+	overflow: visible !important;
+}
+.keypad-panel,
+.cat-panel {
+	display: block;
+	animation: keypadPop .26s cubic-bezier(.22, 1, .36, 1) !important;
+}
+.keypad-panel,
+.cat-panel {
+	display: block;
+	flex: none !important;
+	opacity: 1 !important;
+	transform: none !important;
+	visibility: visible !important;
+	transition: none !important;
+}
+.cat-panel {
+	display: none;
+}
+/* 分类九宫格高度限制 */
+.cat-panel .cat-grid {
+	max-height: 40vh !important;
+	overflow-y: auto !important;
+	flex: none !important;
+}
+/* 标题 */
+.keypad-step-title {
+	position: static !important;
+	text-align: center;
+	font-size: 15px;
+	font-weight: 600;
+	color: #2b4a44;
+	padding: 2px 0 12px;
+	margin-bottom: 10px;
+	border-bottom: 1.5px solid #e8f0ec;
+}
+/* 分类面板头部 */
+.cat-panel-head {
+	position: relative !important;
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 12px;
+}
+.cat-back {
+	position: absolute !important;
+	left: 0 !important;
+	top: 50% !important;
+	transform: translateY(-50%) !important;
+}
+
+/* ===== V91：弹窗关闭动效 + 面板切换淡入（不动position） ===== */
+@keyframes panelFadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.panel-in {
+	animation: panelFadeIn .25s ease;
+}
+.custom-keypad.closing {
+	animation: keypadClose .22s ease forwards !important;
+}
+@keyframes keypadClose {
+	from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+	to { opacity: 0; transform: translate(-50%, -50%) scale(.92); }
+}
+
+/* ===== V92：底部导航滑动指示条 + 页面切换淡入 ===== */
+nav {
+	position: fixed;
+}
+.nav-indicator {
+	position: absolute;
+	bottom: 0;
+	height: 3px;
+	background: #45b8a0;
+	border-radius: 3px 3px 0 0;
+	transition: left .32s cubic-bezier(.22, 1, .36, 1), width .32s cubic-bezier(.22, 1, .36, 1);
+	pointer-events: none;
+	z-index: 1;
+}
+nav button {
+	position: relative;
+	z-index: 2;
+	transition: color .25s ease, transform .2s ease;
+}
+nav button:active {
+	transform: scale(.92);
+}
+nav button.on {
+	color: #45b8a0 !important;
+}
+nav button.on i {
+	transform: translateY(-2px);
+	transition: transform .25s ease;
+}
+/* 页面切换淡入 */
+.page-main {
+	animation: pageFadeIn .3s ease;
+}
+@keyframes pageFadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== V93：今日按钮选中状态 ===== */
+.today-btn.on {
+	background: #45b8a0 !important;
+	color: #fff !important;
+	border-color: #45b8a0 !important;
+}
