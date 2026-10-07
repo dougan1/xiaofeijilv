@@ -81,7 +81,7 @@
 			return defaultState()
 		}
 	})();
-	state.page = '消费';
+	state.tab = '消费';
 	state.schedule = Object.assign(defaultState().schedule, state.schedule || {});
 	state.schedule.overrides = state.schedule.overrides && typeof state.schedule.overrides === 'object' ? state
 		.schedule.overrides : {};
@@ -102,7 +102,7 @@
 	state.cloud.accessKey = '$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 	state.cloud.autoSync = true;
 	state.cloud.autoPull = true;
-	const APP_VERSION = 'V128';
+	const APP_VERSION = 'V145';
 	const oldDefaultCategories = ['餐饮', '交通', '购物', '娱乐', '生活', '其他'];
 	if (!Array.isArray(state.categories) || !state.categories.length || state.categories.length ===
 		oldDefaultCategories.length && state.categories.every(x => oldDefaultCategories.includes(x))) state
@@ -960,7 +960,20 @@ function expenseModal(id = null, originEl = null) {
 		body.querySelectorAll('.kp-cat').forEach(btn => {
 			btn.onclick = () => {
 				catInput.value = btn.dataset.cat;
-				closeKp();
+				// 显示成功动画
+				const body2 = kp.querySelector('#kpBody');
+				body2.innerHTML = '<div class="kp-success"><div id="kpSuccessAnim"></div></div>';
+				kp.querySelector('.kp-head').style.display = 'none';
+				if (window.lottie) {
+					lottie.loadAnimation({
+						container: document.getElementById('kpSuccessAnim'),
+						renderer: 'svg',
+						loop: false,
+						autoplay: true,
+						path: 'Success.json'
+					});
+				}
+				setTimeout(closeKp, 1200);
 			};
 		});
 		body.querySelector('#kpBack').onclick = showAmountPanel;
@@ -1100,6 +1113,47 @@ function budgetModal() {
 	};
 }
 
+function heroAnimModal() {
+	const modes = [
+		{ id: 'connect', name: '粒子连线', desc: '彩色粒子漂浮，距离近时自动连线', icon: '🔗' },
+		{ id: 'bubble', name: '气泡上升', desc: '彩色气泡从底部缓缓上升，左右轻摆', icon: '🫧' },
+		{ id: 'firework', name: '迷你烟花', desc: '周期性在卡片中绽放彩色小烟花', icon: '🎆' },
+		{ id: 'morph', name: '3D形状变形', desc: '粒子在球体/星系/圆环/立方体间变形', icon: '🔮' },
+		{ id: 'off', name: '关闭动画', desc: '纯净背景，无粒子效果', icon: '🚫' }
+	];
+	let current = 'connect';
+	try { current = JSON.parse(localStorage.getItem('heroAnimMode') || '"connect"'); } catch(e) {}
+	const m = modal('剩余金额动画',
+		'<div class="anim-mode-list">' +
+			modes.map(mode =>
+				'<button class="anim-mode-item' + (current === mode.id ? ' active' : '') + '" data-mode="' + mode.id + '">' +
+					'<span class="anim-mode-icon">' + mode.icon + '</span>' +
+					'<div class="anim-mode-info"><b>' + mode.name + '</b><small>' + mode.desc + '</small></div>' +
+					'<span class="anim-mode-check">' + (current === mode.id ? '✓' : '') + '</span>' +
+				'</button>'
+			).join('') +
+		'</div>',
+		'<button class="secondary" data-close>关闭</button>'
+	);
+	m.querySelectorAll('.anim-mode-item').forEach(btn => {
+		btn.onclick = () => {
+			const mode = btn.dataset.mode;
+			localStorage.setItem('heroAnimMode', JSON.stringify(mode));
+			window.dispatchEvent(new CustomEvent('heroAnimModeChanged', { detail: { mode: mode } }));
+			m.querySelectorAll('.anim-mode-item').forEach(b => {
+				b.classList.toggle('active', b.dataset.mode === mode);
+				b.querySelector('.anim-mode-check').textContent = b.dataset.mode === mode ? '✓' : '';
+			});
+			const label = document.getElementById('heroAnimCurrent');
+			if (label) {
+				const found = modes.find(md => md.id === mode);
+				label.textContent = found ? found.name : mode;
+			}
+			setTimeout(() => closeModal(m), 300);
+		};
+	});
+}
+
 function scheduleModal() {
 	const m = modal('排班设置',
 		`<div class="setting-group"><div class="group-title">排班模式</div><div class="shift-mode-row"><button class="${state.schedule.mode==='normal'?'on':''}" data-mode="normal">正常班</button><button class="${state.schedule.mode==='shift'?'on':''}" data-mode="shift">倒班</button></div></div>${state.schedule.mode==='shift'?`<label>倒班周期（逗号分隔）<input id="sCycle" value="${(state.schedule.cycle||[]).join(',')}" placeholder="白班,夜班,休"></label><label>周期开始日期<input id="sStart" type="date" value="${state.schedule.startDate||todayISO()}"></label>`:''}`,
@@ -1199,7 +1253,7 @@ var __lastBalance = null;
 	<section class="setting-group"><div class="group-title">消费</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类</small></div><em>›</em></button><button class="setting-item" id="openBudgetSetting"><span class="setting-icon">💰</span><div><b>周期预算</b><small>${money(cycleBudget())}</small></div><em>›</em></button><button class="setting-item" id="openPeriodSetting"><span class="setting-icon">📅</span><div><b>消费周期</b><small>${state.consumeStart} 至 ${state.consumeEnd}</small></div><em>›</em></button></section>
 	<section class="setting-group"><div class="group-title">排班</div><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode === 'shift' ? '倒班模式' : '正常班模式'}</small></div><em>›</em></button></section>
 	<section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云同步</b><small>${state.cloud.status}</small></div><em>›</em></button><button class="setting-item danger" id="openReset"><span class="setting-icon">⚠️</span><div><b>恢复默认数据</b><small>清除本机测试记录</small></div><em>›</em></button></section>
-	<section class="setting-group"><div class="group-title">动画与特效</div><button class="setting-item" id="openSnakeSetting"><span class="setting-icon">🐍</span><div><b>小蛇设置</b><small>速度、长度、颜色</small></div><em>›</em></button></section>
+	<section class="setting-group"><div class="group-title">动画与特效</div><button class="setting-item" id="openHeroAnimSetting"><span class="setting-icon">✨</span><div><b>剩余金额动画</b><small id="heroAnimCurrent">粒子连线</small></div><em>›</em></button><button class="setting-item" id="openSnakeSetting"><span class="setting-icon">🐍</span><div><b>小蛇设置</b><small>速度、长度、颜色</small></div><em>›</em></button></section>
 	<section class="setting-group"><div class="group-title">关于</div><div class="setting-item"><span class="setting-icon">📌</span><div><b>版本</b><small>点击刷新</small></div><button class="version-btn" id="versionRefresh">${APP_VERSION}</button></div></section>
 	</main>`;
 	}
@@ -1424,6 +1478,7 @@ function bind() {
 		document.getElementById('openCategorySetting')?.addEventListener('click', categoryModal);
 		document.getElementById('openBudgetSetting')?.addEventListener('click', budgetModal);
 		document.getElementById('openPeriodSetting')?.addEventListener('click', periodModal);
+		document.getElementById('openHeroAnimSetting')?.addEventListener('click', heroAnimModal);
 		document.getElementById('openSnakeSetting')?.addEventListener('click', () => {
 			const anim = JSON.parse(localStorage.getItem('animSettings') || '{}');
 			const snake = anim.snake || {};

@@ -10793,3 +10793,102 @@ body.no-page-anim .page-main {
 	-webkit-user-select: none !important;
 	-webkit-touch-callout: none !important;
 }
+/* ===== V129：剩余金额动画选择弹窗 ===== */
+.anim-mode-list {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+.anim-mode-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 16px;
+	border: 1.5px solid #e0ece6;
+	border-radius: 14px;
+	background: #fff;
+	cursor: pointer;
+	transition: all .15s ease;
+	text-align: left;
+	width: 100%;
+}
+.anim-mode-item:active {
+	transform: scale(.98);
+}
+.anim-mode-item.active {
+	border-color: #45b8a0;
+	background: #f0faf7;
+}
+.anim-mode-icon {
+	font-size: 24px;
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #f0f7f4;
+	border-radius: 10px;
+	flex-shrink: 0;
+}
+.anim-mode-info {
+	flex: 1;
+	min-width: 0;
+}
+.anim-mode-info b {
+	display: block;
+	font-size: 15px;
+	color: #2b4a44;
+	margin-bottom: 2px;
+}
+.anim-mode-info small {
+	font-size: 12px;
+	color: #8a9b96;
+	line-height: 1.4;
+}
+.anim-mode-check {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: #45b8a0;
+	color: #fff;
+	font-size: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	opacity: 0;
+	transition: opacity .15s ease;
+}
+.anim-mode-item.active .anim-mode-check {
+	opacity: 1;
+}
+/* V142 Lottie成功动画 */
+.kp-success {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 0;
+}
+.kp-success #kpSuccessAnim {
+	width: 120px;
+	height: 120px;
+}
+.kp-success-text {
+	font-size: 15px;
+	color: var(--ui-ink, #2b4a44);
+	margin-top: 4px;
+	font-weight: 500;
+}
+
+/* V143 成功动画简洁化 */
+.kp-success {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+.kp-success #kpSuccessAnim {
+	width: 140px;
+	height: 140px;
+}
