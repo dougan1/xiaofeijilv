@@ -793,7 +793,5 @@ function spawnDropParticles(count) {
 
 	start();
 
-	window.addEventListener('balanceChanged', function() {
-		spawnDropParticles(18 + Math.floor(Math.random() * 12));
-	});
+
 })();

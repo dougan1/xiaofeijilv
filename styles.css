@@ -10892,3 +10892,50 @@ body.no-page-anim .page-main {
 	width: 140px;
 	height: 140px;
 }
+
+/* V146 wink动画 */
+.hero-card {
+	position: relative;
+}
+.wink-anim {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 60px;
+	height: 60px;
+	z-index: 2;
+	pointer-events: none;
+	opacity: 0;
+	transform: scale(0.5);
+	transition: opacity 0.3s, transform 0.3s;
+}
+.wink-anim.show {
+	opacity: 1;
+	transform: scale(1);
+}
+
+/* V147 wink动画位置修复 */
+.hero-card .wink-anim {
+	position: absolute !important;
+	top: 6px !important;
+	right: 6px !important;
+	left: auto !important;
+	bottom: auto !important;
+	width: 50px !important;
+	height: 50px !important;
+	z-index: 5 !important;
+	pointer-events: none !important;
+	opacity: 0;
+	transform: scale(0.5);
+	transition: opacity 0.3s, transform 0.3s;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+.hero-card .wink-anim.show {
+	opacity: 1;
+	transform: scale(1);
+}
+.hero-card .wink-anim svg {
+	width: 100% !important;
+	height: 100% !important;
+}

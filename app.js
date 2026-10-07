@@ -102,7 +102,7 @@
 	state.cloud.accessKey = '$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 	state.cloud.autoSync = true;
 	state.cloud.autoPull = true;
-	const APP_VERSION = 'V145';
+	const APP_VERSION = 'V147';
 	const oldDefaultCategories = ['餐饮', '交通', '购物', '娱乐', '生活', '其他'];
 	if (!Array.isArray(state.categories) || !state.categories.length || state.categories.length ===
 		oldDefaultCategories.length && state.categories.every(x => oldDefaultCategories.includes(x))) state
@@ -869,6 +869,7 @@ function editShift(date) {
 		delete state.schedule.overrides[date];
 		save();
 		closeModal(m);
+		window.__showWink = true;
 		render();
 	};
 }
@@ -1030,6 +1031,7 @@ function expenseModal(id = null, originEl = null) {
 		}
 		save();
 		closeModal(m);
+		window.__showWink = true;
 		render();
 	};
 }
@@ -1109,6 +1111,7 @@ function budgetModal() {
 		state.budget = v;
 		save();
 		closeModal(m);
+		window.__showWink = true;
 		render();
 	};
 }
@@ -1172,6 +1175,7 @@ function scheduleModal() {
 		}
 		save();
 		closeModal(m);
+		window.__showWink = true;
 		render();
 	};
 }
@@ -1198,6 +1202,7 @@ function addToolModal() {
 		});
 		save();
 		closeModal(m);
+		window.__showWink = true;
 		render();
 	};
 }
@@ -1241,10 +1246,31 @@ var __lastBalance = null;
 		updateNavIndicator();
 		if (state.tab === '消费') {
 			var curBal = remaining();
-			if (__lastBalance !== null && curBal !== __lastBalance) {
-				window.dispatchEvent(new CustomEvent('balanceChanged'));
-			}
 			__lastBalance = curBal;
+			// 播放wink动画
+			if (window.__showWink) {
+				window.__showWink = false;
+				setTimeout(function() {
+					var winkEl = document.getElementById('winkAnim');
+					if (winkEl && window.lottie) {
+						winkEl.innerHTML = '';
+						winkEl.classList.add('show');
+						var anim = lottie.loadAnimation({
+							container: winkEl,
+							renderer: 'svg',
+							loop: false,
+							autoplay: true,
+							path: 'wink.json'
+						});
+						anim.addEventListener('complete', function() {
+							setTimeout(function() {
+								winkEl.classList.remove('show');
+								setTimeout(function() { winkEl.innerHTML = ''; }, 300);
+							}, 500);
+						});
+					}
+				}, 100);
+			}
 		}
 	}
 
@@ -1267,7 +1293,7 @@ var __lastBalance = null;
 			displayOver = displayExpected != null && displayActual > displayExpected + 0.005;
 		const barClass = pct > 50 ? 'green' : pct > 20 ? 'yellow' : 'red';
 		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="consumeSettings">⚙</button></div>
-<section class="hero-card" id="heroCard"><div class="hero-bg-animate" aria-hidden="true"></div><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>剩余 ${futureDays()} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
+<section class="hero-card" id="heroCard"><div class="hero-bg-animate" aria-hidden="true"></div><div class="wink-anim" id="winkAnim"></div><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>剩余 ${futureDays()} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
 	<div class="stats"><button class="stat-card" id="periodBudgetCard"><small>周期可使用</small><b>${money(cycleBudget())}</b><span>点击修改金额</span></button><button class="stat-card daily-card" id="dailyStatCard"><small>每日消费 · ${dateText(displayDate)}</small><div class="daily-values"><div><em>预计</em><b>${displayExpected==null?'—':money(displayExpected)}</b></div><div class="daily-divider"></div><div class="${displayOver?'danger-text':''}"><em>实际</em><b>${money(displayActual)}</b></div></div></button><button class="stat-card actual-card"><div class="actual-head"><small>实际消费</small><span>${state.records.filter(r=>periodDates().includes(r.date)).length} 笔</span></div><b>${money(periodSpent())}</b><em>当前周期累计</em></button></div>
 <section class="card calendar-card"><div class="section-head">${cycleNav('消费周期')}</div><div class="calendar">${daysGrid()}</div></section>
 <section class="card" id="expenseDetailSection"><div class="section-head"><div><h2>${state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细'}</h2><small>${state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序'}</small></div></div>${recordList()}</section><button class="fab" id="addExpense">＋</button></main>`
