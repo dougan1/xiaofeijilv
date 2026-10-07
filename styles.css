@@ -10203,3 +10203,12 @@ body.no-page-anim .page-main {
 .page-main {
 	animation: none !important;
 }
+
+/* ===== V107：消费明细可点击编辑 + 新增排最上 ===== */
+.record[data-id] {
+	cursor: pointer;
+	transition: background .15s ease;
+}
+.record[data-id]:active {
+	background: rgba(69, 184, 160, .06);
+}

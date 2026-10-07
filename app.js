@@ -102,7 +102,7 @@
 	state.cloud.accessKey = '$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 	state.cloud.autoSync = true;
 	state.cloud.autoPull = true;
-	const APP_VERSION = 'V106';
+	const APP_VERSION = 'V109';
 	const oldDefaultCategories = ['餐饮', '交通', '购物', '娱乐', '生活', '其他'];
 	if (!Array.isArray(state.categories) || !state.categories.length || state.categories.length ===
 		oldDefaultCategories.length && state.categories.every(x => oldDefaultCategories.includes(x))) state
@@ -725,8 +725,11 @@
 
 	function recordList() {
 		const currentSet = new Set(periodDates());
-		const rs = state.selectedDate ? state.records.filter(r => r.date === state.selectedDate) : state.records
-			.filter(r => currentSet.has(r.date)).slice().sort((a, b) => b.date.localeCompare(a.date));
+		const rs = (state.selectedDate ? state.records.filter(r => r.date === state.selectedDate) : state.records
+			.filter(r => currentSet.has(r.date))).slice().sort((a, b) => {
+				const dc = b.date.localeCompare(a.date);
+				return dc !== 0 ? dc : b.id.localeCompare(a.id);
+			});
 		if (!rs.length) return '<div class="empty">暂无消费记录</div>';
 		return rs.map(r => {
 			const cat = r.category || '其他',
@@ -828,11 +831,258 @@
 	}
 
 	function categoryModalReplace(oldModal) {
-		oldModal.remove();
-		categoryModal()
-	}
+	oldModal.remove();
+	categoryModal()
+}
 
-	var __lastBalance = null;
+function modal(title, body, footer = '') {
+	const overlay = document.createElement('div');
+	overlay.className = 'modal-mask';
+	overlay.innerHTML = `<div class="modal"><div class="modal-head"><b>${title}</b><button class="close" data-close>×</button></div><div class="modal-body">${body}</div>${footer ? `<div class="modal-actions">${footer}</div>` : ''}</div>`;
+	document.body.appendChild(overlay);
+	overlay.addEventListener('click', e => {
+		if (e.target === overlay || e.target.closest('[data-close]')) closeModal(overlay);
+	});
+	
+	return overlay;
+}
+
+function closeModal(el) {
+	if (!el) return;
+	el.classList.add('closing');
+	setTimeout(() => el.remove(), 220);
+}
+
+function editShift(date) {
+	const current = shiftFor(date),
+		options = ['白班', '夜班', '休', '早班', '中班', '晚班'];
+	const m = modal(dateText(date) + ' 班次',
+		`<div class="shift-options">${options.map(x=>`<button class="${x===current?'on':''}" data-pick="${x}">${x}</button>`).join('')}</div><button class="clear-override" id="autoShift">恢复自动排班</button>`
+	);
+	m.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+		state.schedule.overrides[date] = b.dataset.pick;
+		save();
+		closeModal(m);
+		render();
+	});
+	m.querySelector('#autoShift').onclick = () => {
+		delete state.schedule.overrides[date];
+		save();
+		closeModal(m);
+		render();
+	};
+}
+
+function expenseModal(id = null, originEl = null) {
+	const r = id ? state.records.find(x => x.id === id) : null;
+	const m = modal(id ? '编辑消费' : '添加消费',
+		`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r?.name||'')}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r?.amount||''}" placeholder="请输入金额"></label><label>分类<input id="eCat" type="text" readonly class="cat-input" value="${escapeHtml(r?.category||'')}" placeholder="请选择分类"></label></div><label class="expense-date-row">日期<div class="date-row"><input id="eDate" type="date" value="${r?.date||todayISO()}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-step-title" id="keypadStepTitle">输入金额</div><div class="keypad-panel" id="keypadPanel"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">下一步</button></div></div><div class="cat-panel" id="catPanel" style="display:none"><div class="cat-panel-head"><button type="button" class="cat-back" id="catBack">← 返回</button></div><div class="cat-grid">${state.categories.map(cat=>`<button type="button" class="cat-item" data-cat="${escapeHtml(cat)}">${categoryIcon(cat)} ${escapeHtml(cat)}</button>`).join('')}</div></div></div>`,
+		`<button class="secondary" data-close>取消</button>${id?'<button class="danger" id="deleteExpense">删除</button>':''}<button class="primary" id="saveExpense">保存</button>`
+	);
+	const num = m.querySelector('#eAmount');
+	const catInput = m.querySelector('#eCat');
+	if (catInput) catInput.addEventListener('focus', () => catInput.blur());
+	num.addEventListener('focus', () => num.blur());
+	const keypad = m.querySelector('#customKeypad');
+	const updateKpDisplay = () => { m.querySelector('#keypadDisplay').textContent = num.value || '0'; };
+	updateKpDisplay();
+	const showKeypad = () => {
+		keypad.classList.remove('closing');
+		keypad.classList.add('show');
+		window.__scrollY = window.scrollY;
+		document.documentElement.style.overflow = 'hidden';
+		document.body.style.overflow = 'hidden';
+		document.body.style.position = 'fixed';
+		document.body.style.width = '100%';
+		document.body.style.top = '-' + window.__scrollY + 'px';
+	};
+	const hideKeypad = () => {
+		keypad.classList.add('closing');
+		document.documentElement.style.overflow = '';
+		document.body.style.overflow = '';
+		document.body.style.position = '';
+		document.body.style.width = '';
+		document.body.style.top = '';
+		if (window.__scrollY != null) window.scrollTo(0, window.__scrollY);
+		setTimeout(() => { keypad.classList.remove('show', 'closing'); }, 220);
+	};
+	num.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); num.blur(); showKeypad(); });
+	keypad.addEventListener('click', (ev) => {
+		const btn = ev.target.closest('[data-key]');
+		if (!btn) return;
+		const key = btn.dataset.key;
+		let val = num.value || '';
+		if (key === 'back') { val = val.slice(0, -1); }
+		else if (key === 'done') {
+			m.querySelector('#keypadPanel').style.display = 'none';
+			var cp = m.querySelector('#catPanel');
+			cp.style.display = 'block';
+			m.querySelector('#keypadStepTitle').textContent = '选择分类';
+			return;
+		}
+		else if (key === '.') { if (!val.includes('.')) val += '.'; }
+		else {
+			if (val.includes('.')) { const parts = val.split('.'); if (parts[1].length < 2) val += key; }
+			else { if (val.length < 8) val += key; }
+		}
+		num.value = val;
+		updateKpDisplay();
+	});
+	m.querySelector('#catBack')?.addEventListener('click', () => {
+		m.querySelector('#catPanel').style.display = 'none';
+		m.querySelector('#keypadPanel').style.display = 'block';
+		m.querySelector('#keypadStepTitle').textContent = '输入金额';
+	});
+	m.querySelectorAll('.cat-item').forEach(btn => btn.onclick = () => {
+		catInput.value = btn.dataset.cat;
+		hideKeypad();
+	});
+	const todayBtn = m.querySelector('#eDateToday');
+	const dateInput = m.querySelector('#eDate');
+	if (todayBtn && dateInput) {
+		const updateTodayBtn = () => {
+			if (dateInput.value === todayISO()) {
+				todayBtn.textContent = '已选今日';
+				todayBtn.classList.add('on');
+				todayBtn.style.display = '';
+			} else {
+				todayBtn.style.display = 'none';
+			}
+		};
+		todayBtn.addEventListener('click', () => {
+			dateInput.value = todayISO();
+			updateTodayBtn();
+		});
+		dateInput.addEventListener('change', updateTodayBtn);
+		updateTodayBtn();
+	}
+	setTimeout(() => {
+		document.addEventListener('click', function closeKp(ev) {
+			if (!ev.target.closest('#customKeypad') && !ev.target.closest('#eAmount')) {
+				hideKeypad();
+				document.removeEventListener('click', closeKp);
+			}
+		});
+	}, 100);
+	if (id) m.querySelector('#deleteExpense').onclick = () => {
+		state.records = state.records.filter(x => x.id !== id);
+		recalcAfterConsumption(r.date);
+		save();
+		closeModal(m);
+		render();
+	};
+	m.querySelector('#saveExpense').onclick = () => {
+		const amount = parseFloat(num.value);
+		if (!amount || amount <= 0) { alert('请输入有效金额'); return; }
+		const cat = catInput.value.trim();
+		if (!cat) { alert('请选择分类'); return; }
+		const name = m.querySelector('#eName').value.trim();
+		const date = dateInput.value;
+		if (id) {
+			const old = state.records.find(x => x.id === id);
+			if (old) { old.name = name; old.amount = amount; old.category = cat; old.date = date; }
+			recalcAfterConsumption(r.date);
+		} else {
+			state.records.push({ id: Date.now().toString(), name, amount, category: cat, date });
+			recalcAfterConsumption(date);
+		}
+		save();
+		closeModal(m);
+		render();
+	};
+}
+
+function consumeSettingsModal() {
+	const m = modal('消费设置',
+		`<button class="setting-item" id="mPeriod"><span class="setting-icon">📅</span><div><b>消费周期</b><small>${state.consumeStart} 至 ${state.consumeEnd}</small></div><em>›</em></button><button class="setting-item" id="mBudget"><span class="setting-icon">💰</span><div><b>周期可使用</b><small>${money(cycleBudget())}</small></div><em>›</em></button><button class="setting-item" id="mCategory"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类</small></div><em>›</em></button>`
+	);
+	m.querySelector('#mPeriod').onclick = () => { closeModal(m); periodModal(); };
+	m.querySelector('#mBudget').onclick = () => { closeModal(m); budgetModal(); };
+	m.querySelector('#mCategory').onclick = () => { closeModal(m); categoryModal(); };
+}
+
+function budgetModal() {
+	const m = modal('周期预算',
+		`<label>本周期可使用金额<input id="bAmount" type="number" value="${cycleBudget()}" placeholder="例如：3000"></label><p class="tip">修改后当前周期的剩余金额和进度条会同步更新。</p>`,
+		`<button class="secondary" data-close>取消</button><button class="primary" id="saveBudget">保存</button>`
+	);
+	m.querySelector('#saveBudget').onclick = () => {
+		const v = parseFloat(m.querySelector('#bAmount').value);
+		if (isNaN(v) || v < 0) { alert('请输入有效金额'); return; }
+		const k = cycleKey(state.consumeStart, state.consumeEnd);
+		state.cycleBudgets = state.cycleBudgets || {};
+		state.cycleBudgets[k] = v;
+		state.budget = v;
+		save();
+		closeModal(m);
+		render();
+	};
+}
+
+function scheduleModal() {
+	const m = modal('排班设置',
+		`<div class="setting-group"><div class="group-title">排班模式</div><div class="shift-mode-row"><button class="${state.schedule.mode==='normal'?'on':''}" data-mode="normal">正常班</button><button class="${state.schedule.mode==='shift'?'on':''}" data-mode="shift">倒班</button></div></div>${state.schedule.mode==='shift'?`<label>倒班周期（逗号分隔）<input id="sCycle" value="${(state.schedule.cycle||[]).join(',')}" placeholder="白班,夜班,休"></label><label>周期开始日期<input id="sStart" type="date" value="${state.schedule.startDate||todayISO()}"></label>`:''}`,
+		`<button class="secondary" data-close>取消</button><button class="primary" id="saveSchedule">保存</button>`
+	);
+	m.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+		m.querySelectorAll('[data-mode]').forEach(x => x.classList.remove('on'));
+		b.classList.add('on');
+	});
+	m.querySelector('#saveSchedule').onclick = () => {
+		const mode = m.querySelector('[data-mode].on')?.dataset.mode || 'normal';
+		state.schedule.mode = mode;
+		if (mode === 'shift') {
+			state.schedule.cycle = m.querySelector('#sCycle').value.split(',').map(s => s.trim()).filter(Boolean);
+			state.schedule.startDate = m.querySelector('#sStart').value;
+		}
+		save();
+		closeModal(m);
+		render();
+	};
+}
+
+function addToolModal() {
+	const m = modal('添加工具',
+		`<div class="tool-icon-picks"><button data-icon="🔎">🔎</button><button data-icon="💰">💰</button><button data-icon="📊">📊</button><button data-icon="🔗">🔗</button><button data-icon="🧰">🧰</button></div><label>名称<input id="tName" placeholder="例如：币安、邮箱、公司系统"></label><label>网址<input id="tUrl" placeholder="https://"></label>`,
+		`<button class="secondary" data-close>取消</button><button class="primary" id="saveTool">添加</button>`);
+	let icon = '🔗';
+	m.querySelectorAll('[data-icon]').forEach(b => b.onclick = () => {
+		icon = b.dataset.icon;
+		m.querySelectorAll('[data-icon]').forEach(x => x.classList.remove('on'));
+		b.classList.add('on');
+	});
+	m.querySelector('#saveTool').onclick = () => {
+		let u = m.querySelector('#tUrl').value.trim();
+		if (!u) return alert('请输入网址');
+		if (!new RegExp('^https?://', 'i').test(u)) u = 'https://' + u;
+		state.tools.push({
+			id: Date.now().toString(),
+			name: m.querySelector('#tName').value.trim() || '未命名工具',
+			url: u,
+			icon
+		});
+		save();
+		closeModal(m);
+		render();
+	};
+}
+
+function periodModal() {
+	const m = modal('消费周期',
+		`<label>开始日期<input id="pStart" type="date" value="${state.consumeStart}"></label><label>结束日期<input id="pEnd" type="date" value="${state.consumeEnd}"></label>`,
+		`<button class="secondary" data-close>取消</button><button class="primary" id="savePeriod">保存</button>`
+	);
+	m.querySelector('#savePeriod').onclick = () => {
+		const s = m.querySelector('#pStart').value;
+		const e = m.querySelector('#pEnd').value;
+		if (!s || !e || s > e) { alert('请选择有效日期范围'); return; }
+		setActiveCycle(s, e);
+		closeModal(m);
+		render();
+	};
+}
+
+var __lastBalance = null;
 	function updateNavIndicator() {
 		const navEl = document.querySelector('nav');
 		const indicator = navEl?.querySelector('.nav-indicator');
@@ -863,6 +1113,16 @@
 		}
 	}
 
+	function renderSettings() {
+		return `<main class="page-main"><div class="page-topbar"><div class="page-period">设置</div></div>
+	<section class="setting-group"><div class="group-title">消费</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类</small></div><em>›</em></button><button class="setting-item" id="openBudgetSetting"><span class="setting-icon">💰</span><div><b>周期预算</b><small>${money(cycleBudget())}</small></div><em>›</em></button><button class="setting-item" id="openPeriodSetting"><span class="setting-icon">📅</span><div><b>消费周期</b><small>${state.consumeStart} 至 ${state.consumeEnd}</small></div><em>›</em></button></section>
+	<section class="setting-group"><div class="group-title">排班</div><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode === 'shift' ? '倒班模式' : '正常班模式'}</small></div><em>›</em></button></section>
+	<section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云同步</b><small>${state.cloud.status}</small></div><em>›</em></button><button class="setting-item danger" id="openReset"><span class="setting-icon">⚠️</span><div><b>恢复默认数据</b><small>清除本机测试记录</small></div><em>›</em></button></section>
+	<section class="setting-group"><div class="group-title">动画与特效</div><button class="setting-item" id="openSnakeSetting"><span class="setting-icon">🐍</span><div><b>小蛇设置</b><small>速度、长度、颜色</small></div><em>›</em></button></section>
+	<section class="setting-group"><div class="group-title">关于</div><div class="setting-item"><span class="setting-icon">📌</span><div><b>版本</b><small>点击刷新</small></div><button class="version-btn" id="versionRefresh">${APP_VERSION}</button></div></section>
+	</main>`;
+	}
+
 	function renderConsume() {
 		const rem = remaining(),
 			pct = cycleBudget() ? Math.max(0, Math.min(100, rem / cycleBudget() * 100)) : 0;
@@ -872,7 +1132,7 @@
 			displayOver = displayExpected != null && displayActual > displayExpected + 0.005;
 		const barClass = pct > 50 ? 'green' : pct > 20 ? 'yellow' : 'red';
 		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="consumeSettings">⚙</button></div>
-<section class="hero-card"><div class="hero-bg-animate" aria-hidden="true"></div><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>剩余 ${futureDays()} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
+<section class="hero-card" id="heroCard"><div class="hero-bg-animate" aria-hidden="true"></div><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>剩余 ${futureDays()} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
 	<div class="stats"><button class="stat-card" id="periodBudgetCard"><small>周期可使用</small><b>${money(cycleBudget())}</b><span>点击修改金额</span></button><button class="stat-card daily-card" id="dailyStatCard"><small>每日消费 · ${dateText(displayDate)}</small><div class="daily-values"><div><em>预计</em><b>${displayExpected==null?'—':money(displayExpected)}</b></div><div class="daily-divider"></div><div class="${displayOver?'danger-text':''}"><em>实际</em><b>${money(displayActual)}</b></div></div></button><button class="stat-card actual-card"><div class="actual-head"><small>实际消费</small><span>${state.records.filter(r=>periodDates().includes(r.date)).length} 笔</span></div><b>${money(periodSpent())}</b><em>当前周期累计</em></button></div>
 <section class="card calendar-card"><div class="section-head">${cycleNav('消费周期')}</div><div class="calendar">${daysGrid()}</div></section>
 <section class="card" id="expenseDetailSection"><div class="section-head"><div><h2>${state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细'}</h2><small>${state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序'}</small></div></div>${recordList()}</section><button class="fab" id="addExpense">＋</button></main>`
@@ -897,7 +1157,48 @@
 	if (detailSection) {
 		detailSection.innerHTML = '<div class="section-head"><div><h2>' + (state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细') + '</h2><small>' + (state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序') + '</small></div></div>' + recordList();
 	}
-	// 重新绑定删除按钮事件
+	// 重新绑定事件
+	bindExpenseListEvents();
+}
+
+function updateAfterExpenseChange() {
+	const rem = remaining(),
+		pct = cycleBudget() ? Math.max(0, Math.min(100, rem / cycleBudget() * 100)) : 0;
+	const barClass = pct > 50 ? 'green' : pct > 20 ? 'yellow' : 'red';
+	const displayDate = state.selectedDate || todayISO(),
+		displayActual = spent(displayDate),
+		displayExpected = expectedForDisplayDate(displayDate),
+		displayOver = displayExpected != null && displayActual > displayExpected + 0.005;
+	const hero = document.getElementById('heroCard');
+	if (hero) {
+		hero.querySelector('.hero-top strong').textContent = money(rem);
+		const bar = hero.querySelector('.budget-bar');
+		bar.className = 'budget-bar ' + barClass;
+		bar.querySelector('i').style.width = pct + '%';
+		hero.querySelector('.hero-foot span:last-child').textContent = '剩余 ' + fmt(pct) + '%';
+	}
+	const dailyCard = document.getElementById('dailyStatCard');
+	if (dailyCard) {
+		dailyCard.innerHTML = '<small>每日消费 · ' + dateText(displayDate) + '</small><div class="daily-values"><div><em>预计</em><b>' + (displayExpected==null?'—':money(displayExpected)) + '</b></div><div class="daily-divider"></div><div class="' + (displayOver?'danger-text':'') + '"><em>实际</em><b>' + money(displayActual) + '</b></div></div>';
+	}
+	const actualCard = document.querySelector('.actual-card');
+	if (actualCard) {
+		const periodRecords = state.records.filter(r => periodDates().includes(r.date));
+		actualCard.querySelector('span').textContent = periodRecords.length + ' 笔';
+		actualCard.querySelector('b').textContent = money(periodSpent());
+	}
+	const detailSection = document.getElementById('expenseDetailSection');
+	if (detailSection) {
+		detailSection.innerHTML = '<div class="section-head"><div><h2>' + (state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细') + '</h2><small>' + (state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序') + '</small></div></div>' + recordList();
+	}
+	bindExpenseListEvents();
+}
+
+function bindExpenseListEvents() {
+	document.querySelectorAll('.record[data-id]').forEach(r => r.onclick = (e) => {
+		if (e.target.closest('.trash')) return;
+		expenseModal(r.dataset.id);
+	});
 	document.querySelectorAll('[data-delete-expense]').forEach(b => b.onclick = () => {
 		const id = b.dataset.deleteExpense;
 		const old = state.records.find(x => x.id === id);
@@ -907,12 +1208,11 @@
 		state.records = state.records.filter(x => x.id !== id);
 		recalcAfterConsumption(old.date);
 		save();
-		const _scrollY = window.scrollY;
-		setTimeout(() => { render(); window.scrollTo(0, _scrollY); }, 220)
+		setTimeout(updateAfterExpenseChange, 220);
 	});
 }
 
-function updateScheduleSelection() {
+function renderSchedule() {
 	const viewDate = state.schedule.selectedDate && periodDates().includes(state.schedule.selectedDate) ? state.schedule.selectedDate : todayISO();
 	const afterWork = viewDate === todayISO() && shiftFor(viewDate) !== '休' && isAfterShiftEnd(shiftFor(viewDate));
 	const sh = shiftFor(viewDate),
@@ -920,43 +1220,8 @@ function updateScheduleSelection() {
 		shiftClass = afterWork ? 'shift-off' : sh === '白班' ? 'shift-day' : sh === '夜班' ? 'shift-night' : 'shift-rest',
 		shortSh = afterWork ? '下班' : sh === '白班' ? '白' : sh === '夜班' ? '夜' : '休';
 	const progressHtml = (sh === '休' || afterWork) ? '' :
-		'<div class="shift-progress"><div class="progress"><i style="width:' + p + '%"></i></div><div class="progress-foot ' + (viewDate===todayISO()?'':'only-pct') + '">' + (viewDate===todayISO()?'<span>当前进度</span>':'') + '<b>' + Math.round(p) + '%</b></div></div>';
-	// 更新日期格子选中状态
-	document.querySelectorAll('[data-shift-date]').forEach(b => {
-		b.classList.toggle('selected', b.dataset.shiftDate === state.schedule.selectedDate);
-	});
-	// 更新 shift-hero 卡片
-	const hero = document.getElementById('shiftHeroCard');
-	if (hero) {
-		hero.className = 'shift-hero ' + shiftClass;
-		// 只更新文字和进度部分，保留动画元素
-		const strong = hero.querySelector('strong');
-		if (strong) strong.textContent = shortSh;
-		const p = hero.querySelector('p');
-		const tipText = sh==='休' ? '今天不用上班，好好休息' : afterWork ? '收工啦，今天辛苦了' : '';
-		if (p) p.textContent = tipText;
-		if (!tipText && p) p.style.display = 'none';
-		else if (p) p.style.display = '';
-		// 更新进度条
-		const oldProgress = hero.querySelector('.shift-progress');
-		if (oldProgress) oldProgress.remove();
-		if (progressHtml) hero.insertAdjacentHTML('beforeend', progressHtml);
-	}
-}
-
-function renderSchedule() {
-		const viewDate = state.schedule.selectedDate && periodDates().includes(state.schedule.selectedDate) ? state
-			.schedule.selectedDate : todayISO();
-		const afterWork = viewDate === todayISO() && shiftFor(viewDate) !== '休' && isAfterShiftEnd(shiftFor(
-			viewDate));
-		const sh = shiftFor(viewDate),
-			p = viewDate === todayISO() ? (afterWork ? 100 : timeProgress()) : 0,
-			shiftClass = afterWork ? 'shift-off' : sh === '白班' ? 'shift-day' : sh === '夜班' ? 'shift-night' :
-			'shift-rest',
-			shortSh = afterWork ? '下班' : sh === '白班' ? '白' : sh === '夜班' ? '夜' : '休';
-		const progressHtml = (sh === '休' || afterWork) ? '' :
-			`<div class="shift-progress"><div class="progress"><i style="width:${p}%"></i></div><div class="progress-foot ${viewDate===todayISO()?'':'only-pct'}">${viewDate===todayISO()?'<span>当前进度</span>':''}<b>${Math.round(p)}%</b></div></div>`;
-		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="scheduleSettings">⚙</button></div><section class="shift-hero ${shiftClass}" id="shiftHeroCard"><div class="shift-world" aria-hidden="true"><div class="world-sky"></div><div class="world-sun"></div><div class="world-moon"></div><div class="world-stars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="world-meteors"><i></i><i></i><i></i></div><div class="world-cloud cloud-a"></div><div class="world-cloud cloud-b"></div><div class="world-birds"><i></i><i></i></div><div class="world-z">Z<span>Z</span><b>Z</b></div><div class="world-offwork" aria-hidden="true">
+		`<div class="shift-progress"><div class="progress"><i style="width:${p}%"></i></div><div class="progress-foot ${viewDate===todayISO()?'':'only-pct'}">${viewDate===todayISO()?'<span>当前进度</span>':''}<b>${Math.round(p)}%</b></div></div>`;
+	return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="scheduleSettings">⚙</button></div><section class="shift-hero ${shiftClass}" id="shiftHeroCard"><div class="shift-world" aria-hidden="true"><div class="world-sky"></div><div class="world-sun"></div><div class="world-moon"></div><div class="world-stars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="world-meteors"><i></i><i></i><i></i></div><div class="world-cloud cloud-a"></div><div class="world-cloud cloud-b"></div><div class="world-birds"><i></i><i></i></div><div class="world-z">Z<span>Z</span><b>Z</b></div><div class="world-offwork" aria-hidden="true">
 <div class="offwork-scenery">
   <div class="offwork-sky-shape sky-cloud-1"></div><div class="offwork-sky-shape sky-cloud-2"></div>
   <div class="offwork-horizon horizon-a"><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -985,591 +1250,54 @@ function renderSchedule() {
   </svg>
   <div class="car-exhaust-html" aria-hidden="true"><i class="exhaust-html-puff puff-1"></i><i class="exhaust-html-puff puff-2"></i><i class="exhaust-html-puff puff-3"></i></div>
 </div>
-</div></div><strong>${shortSh}</strong>${sh==='休'?'<p>今天不用上班，好好休息</p>':afterWork?'<p>收工啦，今天辛苦了</p>':''}${progressHtml}</section><section class="card"><div class="section-head">${cycleNav('排班周期')}</div><div class="schedule-calendar-box"><div class="week">${['一','二','三','四','五','六','日'].map(x=>`<i>${x}</i>`).join('')}</div><div class="calendar">${shiftCalendar()}</div><button class="schedule-lock ${state.schedule.calendarLocked?'on':''}" id="scheduleCalendarLock" aria-label="${state.schedule.calendarLocked?'解锁日期表':'锁定日期表'}">${state.schedule.calendarLocked?'🔒':'🔓'}</button></div><div class="legend"><span>${state.schedule.calendarLocked?'🔒日期表已锁定，点击日期查看动画':'🔓点击日期修改班次'}</span></div></section></main>`
+</div></div><strong>${shortSh}</strong>${sh==='休'?'<p>今天不用上班，好好休息</p>':afterWork?'<p>收工啦，今天辛苦了</p>':''}${progressHtml}</section><section class="card"><div class="section-head">${cycleNav('排班周期')}</div><div class="schedule-calendar-box"><div class="week">${['一','二','三','四','五','六','日'].map(x=>`<i>${x}</i>`).join('')}</div><div class="calendar">${shiftCalendar()}</div><button class="schedule-lock ${state.schedule.calendarLocked?'on':''}" id="scheduleCalendarLock" aria-label="${state.schedule.calendarLocked?'解锁日期表':'锁定日期表'}">${state.schedule.calendarLocked?'🔒':'🔓'}</button></div><div class="legend"><span>${state.schedule.calendarLocked?'🔒日期表已锁定，点击日期查看动画':'🔓点击日期修改班次'}</span></div></section></main>`;
+}
+
+function updateScheduleSelection() {
+	const viewDate = state.schedule.selectedDate && periodDates().includes(state.schedule.selectedDate) ? state.schedule.selectedDate : todayISO();
+	const afterWork = viewDate === todayISO() && shiftFor(viewDate) !== '休' && isAfterShiftEnd(shiftFor(viewDate));
+	const sh = shiftFor(viewDate),
+		p = viewDate === todayISO() ? (afterWork ? 100 : timeProgress()) : 0,
+		shiftClass = afterWork ? 'shift-off' : sh === '白班' ? 'shift-day' : sh === '夜班' ? 'shift-night' : 'shift-rest',
+		shortSh = afterWork ? '下班' : sh === '白班' ? '白' : sh === '夜班' ? '夜' : '休';
+	const progressHtml = (sh === '休' || afterWork) ? '' :
+		'<div class="shift-progress"><div class="progress"><i style="width:' + p + '%"></i></div><div class="progress-foot ' + (viewDate===todayISO()?'':'only-pct') + '">' + (viewDate===todayISO()?'<span>当前进度</span>':'') + '<b>' + Math.round(p) + '%</b></div></div>';
+	document.querySelectorAll('[data-shift-date]').forEach(b => {
+		b.classList.toggle('selected', b.dataset.shiftDate === state.schedule.selectedDate);
+	});
+	const hero = document.getElementById('shiftHeroCard');
+	if (hero) {
+		hero.className = 'shift-hero ' + shiftClass;
+		const strong = hero.querySelector('strong');
+		if (strong) strong.textContent = shortSh;
+		const pEl = hero.querySelector('p');
+		const tipText = sh==='休' ? '今天不用上班，好好休息' : afterWork ? '收工啦，今天辛苦了' : '';
+		if (pEl) { pEl.textContent = tipText; pEl.style.display = tipText ? '' : 'none'; }
+		const oldProgress = hero.querySelector('.shift-progress');
+		if (oldProgress) oldProgress.remove();
+		if (progressHtml) hero.insertAdjacentHTML('beforeend', progressHtml);
 	}
+}
 
-	function renderSettings() {
-		let anim = {};
-		try { anim = JSON.parse(localStorage.getItem('animSettings') || '{}'); } catch(e) {}
-		const sSpeed = anim.snake?.speed ?? 1.2;
-		const sMaxLen = anim.snake?.maxLength ?? 20;
-		const sColor = anim.snake?.color ?? '#45b8a0';
-
-		return `<main class="page-main settings-page"><div class="page-topbar"><div class="page-period">应用设置</div></div><section class="setting-group"><div class="group-title">常用设置</div><button class="setting-item" id="openCategorySetting"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类，可自定义</small></div><em>›</em></button><button class="setting-item" id="openScheduleSetting"><span class="setting-icon">🗓</span><div><b>排班设置</b><small>${state.schedule.mode==='normal'?'正常模式':'倒班模式'} · ${state.schedule.startDate}</small></div><em>›</em></button><button class="setting-item" id="openCloudSetting"><span class="setting-icon">☁️</span><div><b>云端数据库</b><small>${escapeHtml(state.cloud?.status||'未连接')} · ${state.cloud?.autoSync===false?'手动同步':'自动同步'}</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">动画与特效</div><div class="anim-setting-card"><div class="anim-setting-title">🐍 日历小蛇</div><div class="anim-slider-row"><label>移动速度</label><input type="range" id="sSpeed" min="0.5" max="4" step="0.1" value="${sSpeed}"><span class="anim-val" id="sSpeedVal">${sSpeed}</span></div><div class="anim-slider-row"><label>最大长度</label><input type="range" id="sMaxLen" min="3" max="30" step="1" value="${sMaxLen}"><span class="anim-val" id="sMaxLenVal">${sMaxLen}</span></div><div class="anim-color-row"><label>蛇身颜色</label><input type="color" id="sColor" value="${sColor}"></div></div></section><section class="setting-group"><div class="group-title">应用信息</div><button class="setting-item version-item" id="versionRefresh"><span class="setting-icon">🔄</span><div><b>版本号</b><small>${APP_VERSION} · 点击刷新</small></div><em>›</em></button></section><section class="setting-group"><div class="group-title">数据</div><button class="setting-item" id="openReset"><span class="setting-icon">♻️</span><div><b class="danger-text">恢复默认数据</b><small>清除本机消费、排班和工具记录</small></div><em>›</em></button></section><div class="settings-tip">周期、金额等高频设置已保留在对应页面右上角，避免重复。</div></main>`
-	}
-
-	function consumeSettingsModal() {
-		const m = modal('消费设置',
-			`<button class="setting-item" id="mPeriod"><span class="setting-icon">📅</span><div><b>消费周期</b><small>${state.consumeStart} 至 ${state.consumeEnd}</small></div><em>›</em></button><button class="setting-item" id="mBudget"><span class="setting-icon">💰</span><div><b>周期可使用</b><small>${money(cycleBudget())}</small></div><em>›</em></button><button class="setting-item" id="mCategory"><span class="setting-icon">🏷</span><div><b>消费分类</b><small>${state.categories.length} 个分类</small></div><em>›</em></button>`
-			);
-		m.querySelector('#mPeriod').onclick = () => {
-			closeModal(m);
-			periodModal()
-		};
-		m.querySelector('#mBudget').onclick = () => {
-			closeModal(m);
-			budgetModal()
-		};
-		m.querySelector('#mCategory').onclick = () => {
-			closeModal(m);
-			categoryModal()
-		}
-	}
-
-	function closeModal(el) {
-		el.classList.add('closing');
-		setTimeout(() => el.remove(), 220);
-	}
-	function modal(title, content, buttons = '', options = {}) {
-		const el = document.createElement('div');
-		el.className = 'modal-mask';
-		if (options.originEl) {
-			const r = options.originEl.getBoundingClientRect();
-			const size = Math.max(r.width, r.height, 58);
-			el.classList.add('modal-mask-fab-panel');
-			el.style.setProperty('--expand-x', `${r.left+r.width/2}px`);
-			el.style.setProperty('--expand-y', `${r.top+r.height/2}px`);
-			el.style.setProperty('--expand-size', `${size}px`);
-			el.style.setProperty('--expand-right', `${Math.max(14, window.innerWidth-r.right)}px`);
-			el.style.setProperty('--expand-bottom', `${Math.max(14, window.innerHeight-r.bottom)}px`);
-		}
-		el.innerHTML =
-			`<div class="modal"><div class="modal-head"><h3>${title}</h3><button class="close" data-close>×</button></div><div class="modal-body">${content}</div>${buttons?`<div class="modal-actions">${buttons}</div>`:''}</div>`;
-		document.body.appendChild(el);
-		el.addEventListener('click', e => {
-			if (e.target.matches('.modal-mask,[data-close]')) closeModal(el)
-		});
-		return el
-	}
-
-	function budgetModal() {
-		const activeBudget = cycleBudget();
-		const max = Math.max(10000, Math.ceil(Number(activeBudget || 0) / 5000) * 5000);
-		const nodes = [];
-		for (let x = 0; x <= max; x += 1000) nodes.push(
-			`<button class="budget-node" data-money="${x}"><i></i><span>${x>=1000?x/1000+'k':x}</span></button>`
-			);
-		const m = modal('周期可使用',
-			`<div class="budget-current" id="budgetValue">${money(activeBudget)}</div><div class="budget-track-wrap"><input id="budgetRange" class="range" type="range" min="0" max="${max}" step="1" value="${activeBudget}"><div class="budget-nodes">${nodes.join('')}</div></div><label class="precise-money">精确金额<input id="budgetNumber" type="number" min="0" step="0.01" value="${activeBudget}"></label>`,
-			`<button class="secondary" data-close>取消</button><button class="primary" id="saveBudget">保存</button>`
-			);
-		const range = m.querySelector('#budgetRange'),
-			num = m.querySelector('#budgetNumber'),
-			val = m.querySelector('#budgetValue');
-		const sync = v => {
-			v = Math.max(0, Number(v) || 0);
-			range.value = Math.min(max, v);
-			num.value = v;
-			val.textContent = money(v)
-		};
-		range.oninput = () => sync(range.value);
-		num.oninput = () => sync(num.value);
-		m.querySelectorAll('[data-money]').forEach(b => b.onclick = () => sync(b.dataset.money));
-		m.querySelector('#saveBudget').onclick = () => {
-			state.budget = Number(num.value) || 0;
-			state.cycleBudgets[activeKey()] = state.budget;
-			if (state.tab === '消费') {
-				recalcAllocationsFromCycle()
-			}
-			save();
-			closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-		}
-	}
-
-	function periodModal() {
-		const m = modal('消费周期',
-			`<div class="date-range-card"><label>开始日期<input id="mStart" type="date" value="${state.periodStart}"></label><div class="date-arrow">→</div><label>结束日期<input id="mEnd" type="date" value="${state.periodEnd}"></label></div><div class="quick-period"><button data-days="7">7天</button><button data-days="15">15天</button><button data-days="30">30天</button><button data-days="31">31天</button></div><p class="tip">日期可以直接点手机系统日期选择器，也可以一键选择常用周期。</p>`,
-			`<button class="secondary" data-close>取消</button><button class="primary" id="savePeriod">保存</button>`
-			);
-		m.querySelectorAll('[data-days]').forEach(b => b.onclick = () => {
-			const s = m.querySelector('#mStart').value || todayISO();
-			m.querySelector('#mEnd').value = addDays(s, Number(b.dataset.days) - 1)
-		});
-		m.querySelector('#savePeriod').onclick = () => {
-			const s = m.querySelector('#mStart').value,
-				e = m.querySelector('#mEnd').value;
-			if (!s || !e || s > e) return alert('结束日期不能早于开始日期');
-			state.periodStart = s;
-			state.periodEnd = e;
-			const k = cycleKey(s, e);
-			if (state.cycleBudgets[k] == null) state.cycleBudgets[k] = Number(state.budget || 0);
-			state.consumeStart = s;
-			state.consumeEnd = e;
-			state.budget = Number(state.cycleBudgets[k] || 0);
-			state.selectedDate = '';
-			save();
-			closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-		}
-	}
-
-	function playExpenseAddEffect(recordId, amount, fromRemaining, toRemaining, done) {
-		const fab = document.getElementById('addExpense');
-		const target = document.querySelector('.hero-card strong');
-		const bar = document.querySelector('.budget-bar i');
-		if (!fab || !target) {
-			done?.();
-			return 0
-		}
-
-		const fr = fab.getBoundingClientRect();
-		const tr = target.getBoundingClientRect();
-		const sx = fr.left + fr.width * .5;
-		const sy = fr.top + fr.height * .5;
-		const tx = tr.left + tr.width * .5;
-		const ty = tr.top + tr.height * .5;
-		const cx = Math.max(122, Math.min(window.innerWidth - 122, sx - 72));
-		const cy = Math.max(112, Math.min(window.innerHeight - 118, sy - 124));
-
-		const stage = document.createElement('div');
-		stage.className = 'expense-receipt-fx';
-		stage.innerHTML = `
-    <div class="receipt-card">
-      <div class="receipt-top"><span>消费入账</span><b>已保存</b></div>
-      <strong>-¥${fmt(amount)}</strong>
-      <i></i><i></i>
-      <em>已记账</em>
-    </div>
-    <div class="balance-impact-ring" aria-hidden="true"></div>
-    <span class="receipt-dot dot-a"></span><span class="receipt-dot dot-b"></span><span class="receipt-dot dot-c"></span>`;
-		document.body.appendChild(stage);
-
-		const card = stage.querySelector('.receipt-card');
-		const stamp = stage.querySelector('.receipt-card em');
-		const ring = stage.querySelector('.balance-impact-ring');
-		const dots = [...stage.querySelectorAll('.receipt-dot')];
-		const place = (el, x, y) => {
-			el.style.left = `${x}px`;
-			el.style.top = `${y}px`
-		};
-		place(card, cx, cy);
-		place(ring, tx, ty);
-		dots.forEach((el, i) => place(el, cx + [-58, 54, 10][i], cy + [-34, -26, 48][i]));
-
-		card.animate([{
-				transform: 'translate(-50%,-50%) scale(.72) rotate(-2deg)',
-				opacity: 0
-			},
-			{
-				transform: 'translate(-50%,-50%) scale(1.02) rotate(0deg)',
-				opacity: 1,
-				offset: .34
-			},
-			{
-				transform: 'translate(-50%,-50%) scale(1) rotate(0deg)',
-				opacity: 1,
-				offset: .72
-			},
-			{
-				transform: 'translate(-50%,-50%) translateY(-8px) scale(.96)',
-				opacity: 0
-			}
-		], {
-			duration: 1260,
-			easing: 'cubic-bezier(.2,.78,.18,1)',
-			fill: 'forwards'
-		});
-
-		stamp.animate([{
-				transform: 'rotate(-10deg) scale(1.8)',
-				opacity: 0
-			},
-			{
-				transform: 'rotate(-10deg) scale(.92)',
-				opacity: 1,
-				offset: .45
-			},
-			{
-				transform: 'rotate(-10deg) scale(1)',
-				opacity: 1
-			}
-		], {
-			duration: 540,
-			delay: 210,
-			easing: 'cubic-bezier(.16,.86,.22,1)',
-			fill: 'forwards'
-		});
-
-		dots.forEach((el, i) => {
-			el.animate([{
-					transform: 'translate(-50%,-50%) scale(.4)',
-					opacity: 0
-				},
-				{
-					transform: `translate(calc(-50% + ${[-10, 9, 0][i]}px),calc(-50% + ${[-12, -10, 12][i]}px)) scale(1)`,
-					opacity: .75,
-					offset: .42
-				},
-				{
-					transform: `translate(calc(-50% + ${[-20, 18, 0][i]}px),calc(-50% + ${[-24, -22, 24][i]}px)) scale(.45)`,
-					opacity: 0
-				}
-			], {
-				duration: 720,
-				delay: 280 + i * 80,
-				easing: 'ease-out',
-				fill: 'forwards'
-			})
-		});
-
-		setTimeout(() => {
-			ring.animate([{
-					transform: 'translate(-50%,-50%) scale(.35)',
-					opacity: 0
-				},
-				{
-					transform: 'translate(-50%,-50%) scale(1)',
-					opacity: .42,
-					offset: .28
-				},
-				{
-					transform: 'translate(-50%,-50%) scale(1.75)',
-					opacity: 0
-				}
-			], {
-				duration: 560,
-				easing: 'cubic-bezier(.18,.72,.2,1)',
-				fill: 'forwards'
-			});
-
-			target.animate([{
-					transform: 'scale(1)'
-				},
-				{
-					transform: 'scale(1.04)',
-					offset: .36
-				},
-				{
-					transform: 'scale(1)'
-				}
-			], {
-				duration: 520,
-				easing: 'cubic-bezier(.2,.8,.2,1)',
-				fill: 'forwards'
-			});
-
-			const budget = Math.max(0, Number(cycleBudget() || 0));
-			const fromPct = budget ? Math.max(0, Math.min(100, Number(fromRemaining || 0) / budget * 100)) : 0;
-			const toPct = budget ? Math.max(0, Math.min(100, Number(toRemaining || 0) / budget * 100)) : 0;
-			const start = Number(fromRemaining || 0),
-				end = Number(toRemaining || 0),
-				begin = performance.now(),
-				duration = 760;
-			const ease = t => 1 - Math.pow(1 - t, 3);
-			const tick = now => {
-				const t = Math.min(1, (now - begin) / duration);
-				const eased = ease(t);
-				const value = start + (end - start) * eased;
-				const pct = fromPct + (toPct - fromPct) * eased;
-				target.textContent = money(value);
-				if (bar) bar.style.width = `${pct}%`;
-				if (t < 1) requestAnimationFrame(tick);
-				else {
-					target.textContent = money(end);
-					if (bar) bar.style.width = `${toPct}%`
-				}
-			};
-			requestAnimationFrame(tick);
-		}, 440);
-
-		setTimeout(() => {
-			stage.remove();
-			done?.();
-		}, 1420);
-		return 1420;
-	}
-
-	function expenseModal(id = null, originEl = null) {
-		const old = id ? state.records.find(r => r.id === id) : null;
-		const r = old || {
-			date: state.selectedDate || todayISO(),
-			name: '',
-			amount: '',
-			category: state.categories[0] || '其他'
-		};
-		const m = modal(id ? '编辑消费' : '添加消费',
-			`<label>消费物品名称 <span class="optional">可不填</span><input id="eName" value="${escapeHtml(r.name)}" placeholder="例如：午餐、加油、买菜"></label><div class="expense-grid expense-main-row"><label>金额<input id="eAmount" type="text" readonly inputmode="none" class="amount-input" value="${r.amount}" placeholder="请输入金额"></label><label>分类<input id="eCat" type="text" readonly class="cat-input" value="${escapeHtml(r.category||'')}" placeholder="请选择分类"></label></div><label class="expense-date-row">日期<div class="date-row"><input id="eDate" type="date" value="${r.date}"><button type="button" class="today-btn" id="eDateToday">今日</button></div></label><div class="custom-keypad" id="customKeypad"><div class="keypad-step-title" id="keypadStepTitle">输入金额</div><div class="keypad-panel" id="keypadPanel"><div class="keypad-display" id="keypadDisplay">0</div><div class="keypad-grid"><button type="button" data-key="1">1</button><button type="button" data-key="2">2</button><button type="button" data-key="3">3</button><button type="button" data-key="4">4</button><button type="button" data-key="5">5</button><button type="button" data-key="6">6</button><button type="button" data-key="7">7</button><button type="button" data-key="8">8</button><button type="button" data-key="9">9</button><button type="button" data-key="." class="key-dot">.</button><button type="button" data-key="0">0</button><button type="button" data-key="back" class="key-back">⌫</button><button type="button" data-key="done" class="key-done">下一步</button></div></div><div class="cat-panel" id="catPanel" style="display:none"><div class="cat-panel-head"><button type="button" class="cat-back" id="catBack">← 返回</button></div><div class="cat-grid">${state.categories.map(cat=>`<button type="button" class="cat-item" data-cat="${escapeHtml(cat)}">${categoryIcon(cat)} ${escapeHtml(cat)}</button>`).join('')}</div></div></div>`,
-			`<button class="secondary" data-close>取消</button>${id?'<button class="danger" id="deleteExpense">删除</button>':''}<button class="primary" id="saveExpense">保存</button>`,
-			id ? {} : {
-				originEl
-			}
-			);
-		const num = m.querySelector('#eAmount');
-		const keypad = m.querySelector('#customKeypad');
-		if (keypad) {
-			const kpDisplay = m.querySelector('#keypadDisplay');
-			const updateKpDisplay = () => { if (kpDisplay) kpDisplay.textContent = num.value || '0'; };
-			const showKeypad = () => {
-					keypad.classList.remove('closing');
-					keypad.classList.add('show');
-					window.__scrollY = window.scrollY;
-					document.documentElement.style.overflow = 'hidden';
-					document.body.style.overflow = 'hidden';
-					document.body.style.position = 'fixed';
-					document.body.style.width = '100%';
-					document.body.style.top = '-' + window.__scrollY + 'px';
-					updateKpDisplay();
-					m.querySelector('#keypadPanel').style.display = 'block';
-					m.querySelector('#catPanel').style.display = 'none';
-					m.querySelector('#keypadStepTitle').textContent = '输入金额';
-				};
-				const hideKeypad = () => {
-					keypad.classList.add('closing');
-					document.documentElement.style.overflow = '';
-					document.body.style.overflow = '';
-					document.body.style.position = '';
-					document.body.style.width = '';
-					document.body.style.top = '';
-					if (window.__scrollY != null) window.scrollTo(0, window.__scrollY);
-					setTimeout(() => {
-						keypad.classList.remove('show', 'closing');
-					}, 220);
-				};
-				num.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); num.blur(); showKeypad(); });
-			keypad.addEventListener('click', (ev) => {
-				const btn = ev.target.closest('[data-key]');
-				if (!btn) return;
-				const key = btn.dataset.key;
-				let val = num.value || '';
-				if (key === 'back') { val = val.slice(0, -1); }
-				else if (key === 'done') {
-					m.querySelector('#keypadPanel').style.display = 'none';
-					var cp = m.querySelector('#catPanel');
-					cp.style.display = 'block';
-					cp.classList.remove('panel-in');
-					void cp.offsetWidth;
-					cp.classList.add('panel-in');
-					m.querySelector('#keypadStepTitle').textContent = '选择分类';
-					return;
-				}
-				else if (key === '.') { if (!val.includes('.')) val += '.'; }
-				else {
-					if (val.includes('.')) { const parts = val.split('.'); if (parts[1].length < 2) val += key; }
-					else { if (val.length < 8) val += key; }
-				}
-				num.value = val;
-				updateKpDisplay();
-			});
-			
-// 今日按钮
-			const todayBtn = m.querySelector('#eDateToday');
-			const dateInput = m.querySelector('#eDate');
-			if (todayBtn && dateInput) {
-				const updateTodayBtn = () => {
-					if (dateInput.value === todayISO()) {
-						todayBtn.textContent = '已选今日';
-						todayBtn.classList.add('on');
-						todayBtn.style.display = '';
-					} else {
-						todayBtn.style.display = 'none';
-					}
-				};
-				todayBtn.addEventListener('click', () => {
-					dateInput.value = todayISO();
-					updateTodayBtn();
-				});
-				dateInput.addEventListener('change', updateTodayBtn);
-				updateTodayBtn();
-			}
-			setTimeout(() => {
-				document.addEventListener('click', function closeKp(ev) {
-				if (!ev.target.closest('#customKeypad') && !ev.target.closest('#eAmount') ) {
-						hideKeypad();
-					}
-				});
-			}, 100);
-
-		// 分类面板逻辑（合并在小键盘弹窗内）
-		const catInput = m.querySelector('#eCat');
-			if (catInput) catInput.addEventListener('focus', () => catInput.blur());
-		const catPanel2 = m.querySelector('#catPanel');
-		if (catPanel2) {
-			catPanel2.addEventListener('click', (ev) => {
-				const btn = ev.target.closest('.cat-item');
-				if (!btn) return;
-				catInput.value = btn.dataset.cat;
-				hideKeypad();
-				// 关闭后重置面板状态
-				setTimeout(() => {
-						m.querySelector('#keypadPanel').style.display = 'block';
-						m.querySelector('#catPanel').style.display = 'none';
-						m.querySelector('#keypadStepTitle').textContent = '输入金额';
-					}, 250);
-			});
-			const backBtn = m.querySelector('#catBack');
-			if (backBtn) {
-				backBtn.addEventListener('click', () => {
-					m.querySelector('#catPanel').style.display = 'none';
-					var kp = m.querySelector('#keypadPanel');
-					kp.style.display = 'block';
-					kp.classList.remove('panel-in');
-					void kp.offsetWidth;
-					kp.classList.add('panel-in');
-					m.querySelector('#keypadStepTitle').textContent = '输入金额';
-				});
-			}
-		}
-		}
-		if (id) m.querySelector('#deleteExpense').onclick = () => {
-			if (confirm('确定删除这笔消费？')) {
-				state.records = state.records.filter(x => x.id !== id);
-				save();
-				closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-			}
-		};
-		m.querySelector('#saveExpense').onclick = () => {
-			const amount = Number(num.value),
-				date = m.querySelector('#eDate').value;
-			if (!date || !Number.isFinite(amount) || amount <= 0) return alert('请填写正确的日期和金额（金额需大于0）');
-			const obj = {
-				id: id || Date.now().toString(),
-				name: m.querySelector('#eName').value.trim(),
-				amount,
-				category: m.querySelector('#eCat').value,
-				date
-			};
-			initAllocations();
-			if (id) {
-				const oldDate = old.date;
-				Object.assign(old, obj);
-				recalcAfterConsumption(oldDate);
-				if (date !== oldDate) recalcAfterConsumption(date);
-				save();
-				closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});;
-				return;
-			}
-			const beforeRemaining = remaining();
-			state.records.push(obj);
-			recalcAfterConsumption(date);
-			save();
-			const afterRemaining = remaining();
-			closeModal(m);
-			requestAnimationFrame(() => playExpenseAddEffect(obj.id, amount, beforeRemaining, afterRemaining,
-			() => {
-					render();
-				}));
-		};
-	}
-
-	function scheduleModal() {
-		const s = state.schedule;
-		const cycleButtons = ['白班', '夜班', '休'];
-		const m = modal('排班设置',
-			`<div class="mode-switch"><button data-mode="normal" class="${s.mode==='normal'?'on':''}">正常模式</button><button data-mode="shift" class="${s.mode==='shift'?'on':''}">倒班模式</button></div><div id="normalBox" class="${s.mode==='normal'?'':'hide'}"><div class="info-box">周一至周五默认白班，周六、周日默认休息。日历里点某一天即可单独修改。</div></div><div id="shiftBox" class="${s.mode==='shift'?'':'hide'}"><label>排班开始日期<input id="sStart" type="date" value="${s.startDate}"></label><div class="cycle-title">快速选择循环</div><div class="cycle-presets"><button data-cycle="白班 夜班 休 白班 夜班 休 休 休">四班两倒</button><button data-cycle="白班 夜班 休">三天循环</button><button data-cycle="白班 夜班 休 休">两班两休</button></div><label>当前循环<input id="sCycle" value="${escapeHtml(s.cycle.join(' '))}"></label><p class="tip">需要特殊排班时，再修改这一行即可，班次之间用空格隔开。</p></div><div class="time-card"><div class="time-title">上下班时间</div><div class="form-grid"><label>白班开始<input id="dayStart" type="time" value="${s.dayStart}"></label><label>白班结束<input id="dayEnd" type="time" value="${s.dayEnd}"></label><label>夜班开始<input id="nightStart" type="time" value="${s.nightStart}"></label><label>夜班结束<input id="nightEnd" type="time" value="${s.nightEnd}"></label></div></div>`,
-			`<button class="secondary" data-close>取消</button><button class="primary" id="saveSchedule">保存</button>`
-			);
-		m.dataset.mode = s.mode;
-		m.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
-			m.dataset.mode = b.dataset.mode;
-			m.querySelectorAll('[data-mode]').forEach(x => x.classList.remove('on'));
-			b.classList.add('on');
-			m.querySelector('#normalBox').classList.toggle('hide', b.dataset.mode !== 'normal');
-			m.querySelector('#shiftBox').classList.toggle('hide', b.dataset.mode !== 'shift')
-		});
-		m.querySelectorAll('[data-cycle]').forEach(b => b.onclick = () => m.querySelector('#sCycle').value = b
-			.dataset.cycle);
-		m.querySelector('#saveSchedule').onclick = () => {
-			s.mode = m.dataset.mode;
-			s.startDate = m.querySelector('#sStart')?.value || s.startDate;
-			s.cycle = (m.querySelector('#sCycle')?.value || '').trim().split(/\s+/).filter(Boolean);
-			if (!s.cycle.length) s.cycle = ['白班', '夜班', '休'];
-			s.dayStart = m.querySelector('#dayStart').value;
-			s.dayEnd = m.querySelector('#dayEnd').value;
-			s.nightStart = m.querySelector('#nightStart').value;
-			s.nightEnd = m.querySelector('#nightEnd').value;
-			save();
-			closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-		}
-	}
-
-	function addToolModal() {
-		const m = modal('添加工具',
-			`<div class="tool-icon-picks"><button data-icon="🔎">🔎</button><button data-icon="💰">💰</button><button data-icon="📊">📊</button><button data-icon="🔗">🔗</button><button data-icon="🧰">🧰</button></div><label>名称<input id="tName" placeholder="例如：币安、邮箱、公司系统"></label><label>网址<input id="tUrl" placeholder="https://"></label>`,
-			`<button class="secondary" data-close>取消</button><button class="primary" id="saveTool">添加</button>`);
-		let icon = '🔗';
-		m.querySelectorAll('[data-icon]').forEach(b => b.onclick = () => {
-			icon = b.dataset.icon;
-			m.querySelectorAll('[data-icon]').forEach(x => x.classList.remove('on'));
-			b.classList.add('on')
-		});
-		m.querySelector('#saveTool').onclick = () => {
-			let u = m.querySelector('#tUrl').value.trim();
-			if (!u) return alert('请输入网址');
-			if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
-			state.tools.push({
-				id: Date.now().toString(),
-				name: m.querySelector('#tName').value.trim() || '未命名工具',
-				url: u,
-				icon
-			});
-			save();
-			closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-		}
-	}
-
-	function editShift(date) {
-		const current = shiftFor(date),
-			options = ['白班', '夜班', '休', '早班', '中班', '晚班'];
-		const m = modal(dateText(date) + ' 班次',
-			`<div class="shift-options">${options.map(x=>`<button class="${x===current?'on':''}" data-pick="${x}">${x}</button>`).join('')}</div><button class="clear-override" id="autoShift">恢复自动排班</button>`
-			);
-		m.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
-			state.schedule.overrides[date] = b.dataset.pick;
-			save();
-			closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-		});
-		m.querySelector('#autoShift').onclick = () => {
-			delete state.schedule.overrides[date];
-			save();
-			closeModal(m);
-					render();
-					window.scrollTo({top:0, behavior:'smooth'});
-		}
-	}
-
-	function bind() {
-		document.getElementById('versionRefresh')?.addEventListener('click', () => location.reload());
-		document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
-			state.tab = b.dataset.tab;
-			state.selectedDate = '';
-			save();
-			render()
-		});
-		document.querySelectorAll('[data-date]').forEach(b => b.onclick = () => {
-			state.selectedDate = state.selectedDate === b.dataset.date ? '' : b.dataset.date;
-			updateDateSelection();
-		});
-		document.querySelectorAll('[data-cycle]').forEach(b => b.onclick = () => shiftCycle(Number(b.dataset
-			.cycle)));
-		document.getElementById('addExpense')?.addEventListener('click', e => expenseModal(null, e.currentTarget));
-		document.getElementById('consumeSettings')?.addEventListener('click', consumeSettingsModal);
-		document.getElementById('periodBudgetCard')?.addEventListener('click', budgetModal);
-		document.querySelectorAll('[data-delete-expense]').forEach(b => b.onclick = () => {
-			const id = b.dataset.deleteExpense;
-			const old = state.records.find(x => x.id === id);
-			if (!old) return;
-			const row = b.closest('.record');
-			row?.classList.add('expense-delete-out');
-			state.records = state.records.filter(x => x.id !== id);
-			recalcAfterConsumption(old.date);
-			save();
-			const _scrollY = window.scrollY;
-				setTimeout(() => { render(); window.scrollTo(0, _scrollY); }, 220)
-		});
-		document.getElementById('scheduleSettings')?.addEventListener('click', scheduleModal);
+function bind() {
+	// 底部导航栏切换
+	document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
+		state.tab = b.dataset.tab;
+		render();
+	});
+	// 消费页面事件
+	document.querySelectorAll('[data-date]').forEach(b => b.onclick = () => {
+		state.selectedDate = state.selectedDate === b.dataset.date ? '' : b.dataset.date;
+		updateDateSelection();
+	});
+	document.querySelectorAll('[data-cycle]').forEach(b => b.onclick = () => shiftCycle(Number(b.dataset.cycle)));
+	document.getElementById('addExpense')?.addEventListener('click', e => expenseModal(null, e.currentTarget));
+	document.getElementById('consumeSettings')?.addEventListener('click', consumeSettingsModal);
+	document.getElementById('periodBudgetCard')?.addEventListener('click', budgetModal);
+	bindExpenseListEvents();
+	document.getElementById('versionRefresh')?.addEventListener('click', () => location.reload());
+	// 排班页面事件
+	document.getElementById('scheduleSettings')?.addEventListener('click', scheduleModal);
 		document.getElementById('scheduleCalendarLock')?.addEventListener('click', () => {
 			state.schedule.calendarLocked = !state.schedule.calendarLocked;
 			save();
@@ -1613,7 +1341,33 @@ function renderSchedule() {
 			b.ontouchend = () => clearTimeout(timer)
 		});
 		document.getElementById('openCategorySetting')?.addEventListener('click', categoryModal);
-		document.getElementById('openScheduleSetting')?.addEventListener('click', scheduleModal);
+		document.getElementById('openBudgetSetting')?.addEventListener('click', budgetModal);
+		document.getElementById('openPeriodSetting')?.addEventListener('click', periodModal);
+		document.getElementById('openSnakeSetting')?.addEventListener('click', () => {
+			const anim = JSON.parse(localStorage.getItem('animSettings') || '{}');
+			const snake = anim.snake || {};
+			const m = modal('小蛇设置',
+				'<label>移动速度 <span id="sSpeedVal">' + (snake.speed || 1.2).toFixed(1) + '</span><input id="sSpeed" type="range" min="0.5" max="3" step="0.1" value="' + (snake.speed || 1.2) + '"></label>' +
+				'<label>最大长度 <span id="sMaxLenVal">' + (snake.maxLength || 15) + '</span><input id="sMaxLen" type="range" min="3" max="30" step="1" value="' + (snake.maxLength || 15) + '"></label>' +
+				'<label>颜色 <input id="sColor" type="color" value="' + (snake.color || '#45b8a0') + '"></label>',
+				'<button class="secondary" data-close>关闭</button>'
+			);
+			m.querySelector('#sSpeed')?.addEventListener('input', function(e) {
+				var v = parseFloat(e.target.value);
+				var el = document.getElementById('sSpeedVal');
+				if (el) el.textContent = v.toFixed(1);
+				saveAnimSettings({ snake: { speed: v } });
+			});
+			m.querySelector('#sMaxLen')?.addEventListener('input', function(e) {
+				var v = parseInt(e.target.value);
+				var el = document.getElementById('sMaxLenVal');
+				if (el) el.textContent = v;
+				saveAnimSettings({ snake: { maxLength: v } });
+			});
+			m.querySelector('#sColor')?.addEventListener('input', function(e) {
+				saveAnimSettings({ snake: { color: e.target.value } });
+			});
+		});		document.getElementById('openScheduleSetting')?.addEventListener('click', scheduleModal);
 		document.getElementById('openCloudSetting')?.addEventListener('click', cloudModal);
 		document.getElementById('openReset')?.addEventListener('click', () => {
 			if (confirm('确定恢复默认数据？这会清除当前本机测试记录。')) {
