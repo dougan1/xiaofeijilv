@@ -10212,3 +10212,584 @@ body.no-page-anim .page-main {
 .record[data-id]:active {
 	background: rgba(69, 184, 160, .06);
 }
+
+/* ===== V111：修复弹窗内容刚打开时溢出弹窗外的bug ===== */
+.modal {
+	overflow: hidden !important;
+	display: flex !important;
+	flex-direction: column !important;
+}
+.modal-body {
+	overflow-y: auto !important;
+	flex: 1 !important;
+	min-height: 0 !important;
+	-webkit-overflow-scrolling: touch;
+}
+.modal-actions {
+	flex-shrink: 0 !important;
+}
+/* ===== V112：修复小键盘刚弹出时内容溢出的bug，统一样式覆盖所有冲突 ===== */
+.custom-keypad {
+	display: none !important;
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	width: 320px !important;
+	max-width: 88vw !important;
+	bottom: auto !important;
+	right: auto !important;
+	background: #ffffff !important;
+	border-radius: 20px !important;
+	box-shadow: 0 16px 48px rgba(43, 74, 68, .25) !important;
+	padding: 16px 16px 14px !important;
+	margin: 0 !important;
+	border: none !important;
+	z-index: 3000 !important;
+	overflow: hidden !important;
+}
+.custom-keypad.show {
+	display: block !important;
+}
+.custom-keypad.animate {
+	animation: keypadPopV112 .28s cubic-bezier(.22, 1, .36, 1) !important;
+}
+@keyframes keypadPopV112 {
+	from { opacity: 0; transform: translate(-50%, -50%) scale(.85); }
+	to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.custom-keypad .keypad-step-title {
+	text-align: center;
+	font-size: 14px;
+	color: #8a9b96;
+	margin-bottom: 10px;
+	font-weight: 500;
+}
+.custom-keypad .keypad-display {
+	font-size: 28px !important;
+	font-weight: 700 !important;
+	color: #2b4a44 !important;
+	text-align: center !important;
+	padding: 8px 0 12px !important;
+	margin-bottom: 10px !important;
+	border-bottom: 1.5px solid #e8f0ec !important;
+	min-height: 40px !important;
+	letter-spacing: 1px !important;
+}
+.custom-keypad .keypad-grid {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 10px !important;
+	max-width: 100% !important;
+	margin: 0 !important;
+}
+.custom-keypad .keypad-grid button {
+	height: 50px !important;
+	border: none !important;
+	border-radius: 14px !important;
+	background: #f0f7f4 !important;
+	color: #2b4a44 !important;
+	font-size: 22px !important;
+	font-weight: 600 !important;
+	width: 100% !important;
+	box-sizing: border-box !important;
+}
+.custom-keypad .keypad-grid .key-dot {
+	font-size: 26px !important;
+}
+.custom-keypad .keypad-grid .key-back {
+	background: #fbeae5 !important;
+	color: #e08570 !important;
+}
+.custom-keypad .keypad-grid .key-done {
+	background: #45b8a0 !important;
+	color: #fff !important;
+	font-size: 16px !important;
+	height: 50px !important;
+}
+.custom-keypad .cat-panel {
+	display: none;
+}
+.custom-keypad .cat-panel-head {
+	margin-bottom: 12px;
+}
+.custom-keypad .cat-panel-head .cat-back {
+	background: none;
+	border: none;
+	color: #45b8a0;
+	font-size: 15px;
+	cursor: pointer;
+	padding: 4px 0;
+}
+.custom-keypad .cat-grid {
+	display: grid !important;
+	grid-template-columns: repeat(3, 1fr) !important;
+	gap: 10px !important;
+	max-height: 50vh;
+	overflow-y: auto;
+}
+.custom-keypad .cat-item {
+	height: 52px !important;
+	border: 1.5px solid #e0ece6 !important;
+	border-radius: 12px !important;
+	background: #fff !important;
+	color: #2b4a44 !important;
+	font-size: 14px !important;
+	cursor: pointer !important;
+	width: 100% !important;
+	box-sizing: border-box !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+}
+.custom-keypad .cat-item:active {
+	background: #e8f5f0 !important;
+	border-color: #45b8a0 !important;
+}
+/* 确保小键盘内的面板不会溢出 */
+.custom-keypad .keypad-panel,
+.custom-keypad .cat-panel {
+	width: 100% !important;
+	box-sizing: border-box !important;
+	overflow: hidden !important;
+}
+/* ===== V115：重写小键盘，用modal系统实现，简单稳定 ===== */
+.kp-display {
+	font-size: 32px;
+	font-weight: 700;
+	color: #2b4a44;
+	text-align: center;
+	padding: 16px 0 20px;
+	border-bottom: 1.5px solid #e8f0ec;
+	margin-bottom: 16px;
+	letter-spacing: 1px;
+	min-height: 44px;
+}
+.kp-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+.kp-grid button {
+	height: 54px;
+	border: none;
+	border-radius: 14px;
+	background: #f0f7f4;
+	color: #2b4a44;
+	font-size: 22px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background .1s ease, transform .1s ease;
+}
+.kp-grid button:active {
+	background: #d8ece4;
+	transform: scale(.94);
+}
+.kp-grid button[data-k="back"] {
+	background: #fbeae5;
+	color: #e08570;
+	font-size: 20px;
+}
+.kp-grid button.kp-next {
+	background: #45b8a0;
+	color: #fff;
+	font-size: 16px;
+	grid-column: span 3;
+	height: 48px;
+}
+.kp-grid button.kp-next:active {
+	background: #3aa890;
+}
+.kp-cat-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+	max-height: 55vh;
+	overflow-y: auto;
+}
+.kp-cat-item {
+	height: 56px;
+	border: 1.5px solid #e0ece6;
+	border-radius: 12px;
+	background: #fff;
+	color: #2b4a44;
+	font-size: 14px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all .15s ease;
+}
+.kp-cat-item:active {
+	background: #e8f5f0;
+	border-color: #45b8a0;
+	transform: scale(.96);
+}
+/* ===== V116：小键盘弹窗居中悬浮，大小合适 ===== */
+.kp-modal-mask {
+	align-items: center !important;
+	justify-content: center !important;
+}
+.kp-modal-mask .modal.kp-modal {
+	width: 320px !important;
+	max-width: 88vw !important;
+	border-radius: 20px !important;
+	max-height: 80vh !important;
+	animation: kpPop .28s cubic-bezier(.22, 1, .36, 1) !important;
+	box-shadow: 0 20px 60px rgba(43, 74, 68, .3) !important;
+}
+@keyframes kpPop {
+	from { opacity: 0; transform: scale(.85) translateY(10px); }
+	to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.kp-modal-mask.closing .modal.kp-modal {
+	animation: kpPopOut .2s ease-in forwards !important;
+}
+@keyframes kpPopOut {
+	from { opacity: 1; transform: scale(1); }
+	to { opacity: 0; transform: scale(.9); }
+}
+.kp-modal .modal-head {
+	padding-bottom: 10px;
+	border-bottom: 1px solid #f0f0f0;
+}
+.kp-modal .modal-body {
+	padding: 16px 16px 8px !important;
+}
+.kp-modal .modal-actions {
+	padding: 8px 16px 16px !important;
+	border-top: none !important;
+}
+/* ===== V120：完全独立的小键盘弹窗 ===== */
+.kp-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(43, 74, 68, .45);
+	z-index: 3000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	animation: kpFadeIn .2s ease;
+}
+@keyframes kpFadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+.kp-box {
+	width: 320px;
+	max-width: 88vw;
+	background: #fff;
+	border-radius: 20px;
+	box-shadow: 0 20px 60px rgba(43, 74, 68, .3);
+	overflow: hidden;
+	animation: kpPop .28s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes kpPop {
+	from { opacity: 0; transform: scale(.85) translateY(10px); }
+	to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.kp-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 18px;
+	border-bottom: 1px solid #f0f0f0;
+}
+.kp-head span {
+	font-size: 16px;
+	font-weight: 600;
+	color: #2b4a44;
+}
+.kp-x {
+	width: 28px;
+	height: 28px;
+	border: none;
+	background: #f0f7f4;
+	border-radius: 50%;
+	color: #8a9b96;
+	font-size: 18px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+.kp-x:active { background: #d8ece4; }
+.kp-body {
+	padding: 16px;
+}
+.kp-display {
+	font-size: 32px;
+	font-weight: 700;
+	color: #2b4a44;
+	text-align: center;
+	padding: 12px 0 16px;
+	border-bottom: 1.5px solid #e8f0ec;
+	margin-bottom: 14px;
+	letter-spacing: 1px;
+	min-height: 44px;
+}
+.kp-keys {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+.kp-keys button {
+	height: 52px;
+	border: none;
+	border-radius: 14px;
+	background: #f0f7f4;
+	color: #2b4a44;
+	font-size: 22px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background .1s ease, transform .1s ease;
+}
+.kp-keys button:active {
+	background: #d8ece4;
+	transform: scale(.94);
+}
+.kp-keys button[data-k="back"] {
+	background: #fbeae5;
+	color: #e08570;
+	font-size: 20px;
+}
+.kp-keys button.kp-ok {
+	background: #45b8a0;
+	color: #fff;
+	font-size: 16px;
+	grid-column: span 3;
+	height: 46px;
+}
+.kp-keys button.kp-ok:active { background: #3aa890; }
+.kp-cats {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+	max-height: 50vh;
+	overflow-y: auto;
+	margin-bottom: 12px;
+}
+.kp-cat {
+	height: 54px;
+	border: 1.5px solid #e0ece6;
+	border-radius: 12px;
+	background: #fff;
+	color: #2b4a44;
+	font-size: 14px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all .15s ease;
+}
+.kp-cat:active {
+	background: #e8f5f0;
+	border-color: #45b8a0;
+	transform: scale(.96);
+}
+.kp-back {
+	width: 100%;
+	height: 44px;
+	border: none;
+	background: #f0f7f4;
+	color: #45b8a0;
+	font-size: 15px;
+	border-radius: 12px;
+	cursor: pointer;
+}
+.kp-back:active { background: #d8ece4; }
+/* ===== V121：小键盘连续点击优化 ===== */
+.kp-keys button,
+.kp-cat,
+.kp-back,
+.kp-x {
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+.kp-keys button {
+	transition: none !important;
+}
+.kp-keys button:active {
+	transform: scale(.92);
+	transition: transform .05s ease;
+}
+/* ===== V124：预算设置滑块样式 ===== */
+.budget-setting {
+	padding: 10px 0;
+}
+.budget-amount {
+	font-size: 36px;
+	font-weight: 700;
+	color: #45b8a0;
+	text-align: center;
+	margin-bottom: 20px;
+	letter-spacing: 1px;
+}
+.budget-setting input[type="range"] {
+	width: 100%;
+	height: 8px;
+	-webkit-appearance: none;
+	appearance: none;
+	background: linear-gradient(to right, #45b8a0, #a8e0d0);
+	border-radius: 4px;
+	outline: none;
+	cursor: pointer;
+}
+.budget-setting input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: #fff;
+	border: 3px solid #45b8a0;
+	box-shadow: 0 2px 8px rgba(69, 184, 160, .3);
+	cursor: pointer;
+	transition: transform .1s ease;
+}
+.budget-setting input[type="range"]::-webkit-slider-thumb:active {
+	transform: scale(1.15);
+}
+.budget-setting input[type="range"]::-moz-range-thumb {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: #fff;
+	border: 3px solid #45b8a0;
+	box-shadow: 0 2px 8px rgba(69, 184, 160, .3);
+	cursor: pointer;
+}
+.budget-labels {
+	display: flex;
+	justify-content: space-between;
+	font-size: 12px;
+	color: #8a9b96;
+	margin-top: 8px;
+	margin-bottom: 16px;
+}
+.budget-setting .tip {
+	font-size: 13px;
+	color: #8a9b96;
+	line-height: 1.5;
+	margin: 0;
+}
+/* ===== V125：进度条式预算滑块 ===== */
+.budget-setting {
+	padding: 10px 0 20px;
+}
+.budget-amount {
+	font-size: 38px;
+	font-weight: 700;
+	color: #45b8a0;
+	text-align: center;
+	margin-bottom: 28px;
+	letter-spacing: 1px;
+}
+.budget-slider {
+	position: relative;
+	padding: 0 4px;
+	margin-bottom: 8px;
+	cursor: pointer;
+	touch-action: none;
+}
+.budget-track {
+	height: 10px;
+	background: #e8f0ec;
+	border-radius: 5px;
+	overflow: hidden;
+	position: relative;
+}
+.budget-fill {
+	height: 100%;
+	background: #45b8a0;
+	border-radius: 5px;
+	transition: width .15s ease;
+	width: 0%;
+}
+.budget-marks {
+	position: relative;
+	height: 40px;
+	margin-top: 6px;
+}
+.budget-mark {
+	position: absolute;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	cursor: pointer;
+}
+.budget-mark-dot {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #fff;
+	border: 2.5px solid #c5d8d2;
+	margin-top: -18px;
+	transition: all .15s ease;
+	position: relative;
+	z-index: 2;
+}
+.budget-mark span {
+	font-size: 12px;
+	color: #8a9b96;
+	margin-top: 4px;
+	white-space: nowrap;
+}
+.budget-mark.active .budget-mark-dot {
+	background: #45b8a0;
+	border-color: #45b8a0;
+	transform: scale(1.2);
+	box-shadow: 0 0 0 4px rgba(69, 184, 160, .15);
+}
+.budget-mark.active span {
+	color: #45b8a0;
+	font-weight: 600;
+}
+.budget-mark:hover .budget-mark-dot {
+	border-color: #45b8a0;
+}
+.budget-setting .tip {
+	font-size: 13px;
+	color: #8a9b96;
+	text-align: center;
+	margin: 16px 0 0;
+}
+/* ===== V126：修复预算滑块布局 ===== */
+.budget-slider {
+	overflow: hidden;
+	padding: 10px 4px 0;
+}
+.budget-marks {
+	height: 32px;
+	margin-top: 4px;
+}
+.budget-mark-dot {
+	margin-top: -16px;
+}
+.budget-mark span {
+	margin-top: 2px;
+}
+.budget-setting {
+	padding-bottom: 10px;
+}
+/* ===== V127：禁止预算滑块文本选中 ===== */
+.budget-setting,
+.budget-slider,
+.budget-amount,
+.budget-mark,
+.budget-mark span {
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-touch-callout: none;
+}
+/* ===== V128：强制禁止预算滑块文本选中 ===== */
+.budget-setting * {
+	user-select: none !important;
+	-webkit-user-select: none !important;
+	-webkit-touch-callout: none !important;
+}
