@@ -102,7 +102,7 @@
 	state.cloud.accessKey = '$2a$10$ef1OKmYSovwETwPIThsBouQdqVGAN.ldYlML6Wi5sDYfa46feUv/.';
 	state.cloud.autoSync = true;
 	state.cloud.autoPull = true;
-	const APP_VERSION = 'V101';
+	const APP_VERSION = 'V106';
 	const oldDefaultCategories = ['餐饮', '交通', '购物', '娱乐', '生活', '其他'];
 	if (!Array.isArray(state.categories) || !state.categories.length || state.categories.length ===
 		oldDefaultCategories.length && state.categories.every(x => oldDefaultCategories.includes(x))) state
@@ -873,12 +873,78 @@
 		const barClass = pct > 50 ? 'green' : pct > 20 ? 'yellow' : 'red';
 		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="consumeSettings">⚙</button></div>
 <section class="hero-card"><div class="hero-bg-animate" aria-hidden="true"></div><div class="hero-top"><div><small>本周期剩余金额</small><strong>${money(rem)}</strong></div></div><div class="budget-bar ${barClass}"><i style="width:${pct}%"></i></div><div class="hero-foot"><span>剩余 ${futureDays()} 天</span><span>剩余 ${fmt(pct)}%</span></div></section>
-	<div class="stats"><button class="stat-card" id="periodBudgetCard"><small>周期可使用</small><b>${money(cycleBudget())}</b><span>点击修改金额</span></button><button class="stat-card daily-card"><small>每日消费 · ${dateText(displayDate)}</small><div class="daily-values"><div><em>预计</em><b>${displayExpected==null?'—':money(displayExpected)}</b></div><div class="daily-divider"></div><div class="${displayOver?'danger-text':''}"><em>实际</em><b>${money(displayActual)}</b></div></div></button><button class="stat-card actual-card"><div class="actual-head"><small>实际消费</small><span>${state.records.filter(r=>periodDates().includes(r.date)).length} 笔</span></div><b>${money(periodSpent())}</b><em>当前周期累计</em></button></div>
+	<div class="stats"><button class="stat-card" id="periodBudgetCard"><small>周期可使用</small><b>${money(cycleBudget())}</b><span>点击修改金额</span></button><button class="stat-card daily-card" id="dailyStatCard"><small>每日消费 · ${dateText(displayDate)}</small><div class="daily-values"><div><em>预计</em><b>${displayExpected==null?'—':money(displayExpected)}</b></div><div class="daily-divider"></div><div class="${displayOver?'danger-text':''}"><em>实际</em><b>${money(displayActual)}</b></div></div></button><button class="stat-card actual-card"><div class="actual-head"><small>实际消费</small><span>${state.records.filter(r=>periodDates().includes(r.date)).length} 笔</span></div><b>${money(periodSpent())}</b><em>当前周期累计</em></button></div>
 <section class="card calendar-card"><div class="section-head">${cycleNav('消费周期')}</div><div class="calendar">${daysGrid()}</div></section>
-<section class="card"><div class="section-head"><div><h2>${state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细'}</h2><small>${state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序'}</small></div></div>${recordList()}</section><button class="fab" id="addExpense">＋</button></main>`
+<section class="card" id="expenseDetailSection"><div class="section-head"><div><h2>${state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细'}</h2><small>${state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序'}</small></div></div>${recordList()}</section><button class="fab" id="addExpense">＋</button></main>`
 	}
 
-	function renderSchedule() {
+	function updateDateSelection() {
+	const displayDate = state.selectedDate || todayISO(),
+		displayActual = spent(displayDate),
+		displayExpected = expectedForDisplayDate(displayDate),
+		displayOver = displayExpected != null && displayActual > displayExpected + 0.005;
+	// 更新日期格子选中状态
+	document.querySelectorAll('[data-date]').forEach(b => {
+		b.classList.toggle('selected', b.dataset.date === state.selectedDate);
+	});
+	// 更新每日消费统计卡片
+	const dailyCard = document.getElementById('dailyStatCard');
+	if (dailyCard) {
+		dailyCard.innerHTML = '<small>每日消费 · ' + dateText(displayDate) + '</small><div class="daily-values"><div><em>预计</em><b>' + (displayExpected==null?'—':money(displayExpected)) + '</b></div><div class="daily-divider"></div><div class="' + (displayOver?'danger-text':'') + '"><em>实际</em><b>' + money(displayActual) + '</b></div></div>';
+	}
+	// 更新消费明细
+	const detailSection = document.getElementById('expenseDetailSection');
+	if (detailSection) {
+		detailSection.innerHTML = '<div class="section-head"><div><h2>' + (state.selectedDate?dateText(state.selectedDate)+' 消费明细':'消费明细') + '</h2><small>' + (state.selectedDate?'当前仅显示当天':'当前周期记录按日期倒序') + '</small></div></div>' + recordList();
+	}
+	// 重新绑定删除按钮事件
+	document.querySelectorAll('[data-delete-expense]').forEach(b => b.onclick = () => {
+		const id = b.dataset.deleteExpense;
+		const old = state.records.find(x => x.id === id);
+		if (!old) return;
+		const row = b.closest('.record');
+		row?.classList.add('expense-delete-out');
+		state.records = state.records.filter(x => x.id !== id);
+		recalcAfterConsumption(old.date);
+		save();
+		const _scrollY = window.scrollY;
+		setTimeout(() => { render(); window.scrollTo(0, _scrollY); }, 220)
+	});
+}
+
+function updateScheduleSelection() {
+	const viewDate = state.schedule.selectedDate && periodDates().includes(state.schedule.selectedDate) ? state.schedule.selectedDate : todayISO();
+	const afterWork = viewDate === todayISO() && shiftFor(viewDate) !== '休' && isAfterShiftEnd(shiftFor(viewDate));
+	const sh = shiftFor(viewDate),
+		p = viewDate === todayISO() ? (afterWork ? 100 : timeProgress()) : 0,
+		shiftClass = afterWork ? 'shift-off' : sh === '白班' ? 'shift-day' : sh === '夜班' ? 'shift-night' : 'shift-rest',
+		shortSh = afterWork ? '下班' : sh === '白班' ? '白' : sh === '夜班' ? '夜' : '休';
+	const progressHtml = (sh === '休' || afterWork) ? '' :
+		'<div class="shift-progress"><div class="progress"><i style="width:' + p + '%"></i></div><div class="progress-foot ' + (viewDate===todayISO()?'':'only-pct') + '">' + (viewDate===todayISO()?'<span>当前进度</span>':'') + '<b>' + Math.round(p) + '%</b></div></div>';
+	// 更新日期格子选中状态
+	document.querySelectorAll('[data-shift-date]').forEach(b => {
+		b.classList.toggle('selected', b.dataset.shiftDate === state.schedule.selectedDate);
+	});
+	// 更新 shift-hero 卡片
+	const hero = document.getElementById('shiftHeroCard');
+	if (hero) {
+		hero.className = 'shift-hero ' + shiftClass;
+		// 只更新文字和进度部分，保留动画元素
+		const strong = hero.querySelector('strong');
+		if (strong) strong.textContent = shortSh;
+		const p = hero.querySelector('p');
+		const tipText = sh==='休' ? '今天不用上班，好好休息' : afterWork ? '收工啦，今天辛苦了' : '';
+		if (p) p.textContent = tipText;
+		if (!tipText && p) p.style.display = 'none';
+		else if (p) p.style.display = '';
+		// 更新进度条
+		const oldProgress = hero.querySelector('.shift-progress');
+		if (oldProgress) oldProgress.remove();
+		if (progressHtml) hero.insertAdjacentHTML('beforeend', progressHtml);
+	}
+}
+
+function renderSchedule() {
 		const viewDate = state.schedule.selectedDate && periodDates().includes(state.schedule.selectedDate) ? state
 			.schedule.selectedDate : todayISO();
 		const afterWork = viewDate === todayISO() && shiftFor(viewDate) !== '休' && isAfterShiftEnd(shiftFor(
@@ -890,7 +956,7 @@
 			shortSh = afterWork ? '下班' : sh === '白班' ? '白' : sh === '夜班' ? '夜' : '休';
 		const progressHtml = (sh === '休' || afterWork) ? '' :
 			`<div class="shift-progress"><div class="progress"><i style="width:${p}%"></i></div><div class="progress-foot ${viewDate===todayISO()?'':'only-pct'}">${viewDate===todayISO()?'<span>当前进度</span>':''}<b>${Math.round(p)}%</b></div></div>`;
-		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="scheduleSettings">⚙</button></div><section class="shift-hero ${shiftClass}"><div class="shift-world" aria-hidden="true"><div class="world-sky"></div><div class="world-sun"></div><div class="world-moon"></div><div class="world-stars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="world-meteors"><i></i><i></i><i></i></div><div class="world-cloud cloud-a"></div><div class="world-cloud cloud-b"></div><div class="world-birds"><i></i><i></i></div><div class="world-z">Z<span>Z</span><b>Z</b></div><div class="world-offwork" aria-hidden="true">
+		return `<main class="page-main"><div class="page-topbar"><div class="page-period">${activeStart()} 至 ${activeEnd()}</div><button class="top-setting" id="scheduleSettings">⚙</button></div><section class="shift-hero ${shiftClass}" id="shiftHeroCard"><div class="shift-world" aria-hidden="true"><div class="world-sky"></div><div class="world-sun"></div><div class="world-moon"></div><div class="world-stars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="world-meteors"><i></i><i></i><i></i></div><div class="world-cloud cloud-a"></div><div class="world-cloud cloud-b"></div><div class="world-birds"><i></i><i></i></div><div class="world-z">Z<span>Z</span><b>Z</b></div><div class="world-offwork" aria-hidden="true">
 <div class="offwork-scenery">
   <div class="offwork-sky-shape sky-cloud-1"></div><div class="offwork-sky-shape sky-cloud-2"></div>
   <div class="offwork-horizon horizon-a"><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -1484,7 +1550,7 @@
 		});
 		document.querySelectorAll('[data-date]').forEach(b => b.onclick = () => {
 			state.selectedDate = state.selectedDate === b.dataset.date ? '' : b.dataset.date;
-			render()
+			updateDateSelection();
 		});
 		document.querySelectorAll('[data-cycle]').forEach(b => b.onclick = () => shiftCycle(Number(b.dataset
 			.cycle)));
@@ -1513,7 +1579,9 @@
 			const d = b.dataset.shiftDate;
 			state.schedule.selectedDate = d;
 			save();
-			if (state.schedule.calendarLocked) render();
+			if (state.schedule.calendarLocked) {
+				updateScheduleSelection();
+			}
 			else editShift(d)
 		});
 		document.getElementById('addTool')?.addEventListener('click', addToolModal);

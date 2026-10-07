@@ -10179,3 +10179,27 @@ nav button.on i {
 .keypad-grid .key-done:active {
 	transform: none !important;
 }
+
+/* ===== V102：点击日期不跳动 + 日期输入框垂直居中 ===== */
+.date-row input[type="date"] {
+	display: flex !important;
+	align-items: center !important;
+	line-height: normal !important;
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+	height: 44px !important;
+}
+.date-row input[type="date"]::-webkit-date-and-time-value {
+	text-align: left !important;
+	margin: 0 !important;
+}
+
+/* ===== V103：点击日期不播放淡入动画 ===== */
+body.no-page-anim .page-main {
+	animation: none !important;
+}
+
+/* ===== V106：取消全局页面淡入动画，防止页面跳动 ===== */
+.page-main {
+	animation: none !important;
+}
